@@ -1,0 +1,2072 @@
+{
+  "name": "Customer Email Reply Management - EspoCRM",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "trackLastMessageId": true
+        }
+      },
+      "id": "8bf308e4-e866-49b1-89ef-e760c5421b17",
+      "name": "Email Trigger (IMAP)",
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2,
+      "position": [
+        -368,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "SenderEmail",
+              "type": "string",
+              "value": "={{ (( ($json.from || '') + '').match(/[^<>\\s]+@[^<>\\s]+/) || [''])[0] }}"
+            },
+            {
+              "id": "a2",
+              "name": "SenderName",
+              "type": "string",
+              "value": "={{ ((($json.from || '') + '').split('<')[0] || '').replace(/\"/g,'').trim() || 'Unknown Sender' }}"
+            },
+            {
+              "id": "a3",
+              "name": "Subject",
+              "type": "string",
+              "value": "={{ $json.subject || '(No Subject)' }}"
+            },
+            {
+              "id": "a4",
+              "name": "Message",
+              "type": "string",
+              "value": "={{ ((($json.textPlain || $json.text || '') + '').split(/\\n>|\\r\\n>|On .*wrote:|-----Original Message-----|________________________________/)[0]).trim() || 'No message content' }}"
+            },
+            {
+              "id": "a5",
+              "name": "MessageId",
+              "type": "string",
+              "value": "={{ ($json.metadata && ($json.metadata['message-id'] || $json.metadata.messageId)) || $json.messageId || '' }}"
+            },
+            {
+              "id": "a6",
+              "name": "InReplyTo",
+              "type": "string",
+              "value": "={{ ($json.metadata && ($json.metadata['in-reply-to'] || $json.metadata.inReplyTo)) || '' }}"
+            },
+            {
+              "id": "a7",
+              "name": "ReceivedAt",
+              "type": "string",
+              "value": "={{ $json.date || $now.toISO() }}"
+            },
+            {
+              "id": "a8",
+              "name": "ReplyChannel",
+              "type": "string",
+              "value": "Email"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f1f3cc43-0a42-4d1b-8752-d6d616619e02",
+      "name": "Extract Reply Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -128,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "where[0][type]",
+              "value": "contains"
+            },
+            {
+              "name": "where[0][attribute]",
+              "value": "emailAddress"
+            },
+            {
+              "name": "where[0][value]",
+              "value": "={{ $json.SenderEmail }}"
+            },
+            {
+              "name": "maxSize",
+              "value": "1"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ccf450a9-a880-4ba2-9c8e-3a9fb0540895",
+      "name": "Search Lead - EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        336,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "494b5af2-3355-4617-ace7-5207130af942",
+      "name": "Lead Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        640
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "p1",
+              "name": "EspoCRMRecordId",
+              "type": "string",
+              "value": "={{ $('Search Lead - EspoCRM').item.json.list[0].id }}"
+            },
+            {
+              "id": "p2",
+              "name": "LeadName",
+              "type": "string",
+              "value": "={{ $('Search Lead - EspoCRM').item.json.list[0].name }}"
+            },
+            {
+              "id": "p3",
+              "name": "CurrentLeadStatus",
+              "type": "string",
+              "value": "={{ $('Search Lead - EspoCRM').item.json.list[0].status }}"
+            },
+            {
+              "id": "p4",
+              "name": "AssignedUser",
+              "type": "string",
+              "value": "={{ ($('Search Lead - EspoCRM').item.json.list[0].assignedUser && $('Search Lead - EspoCRM').item.json.list[0].assignedUser.name) || 'Unassigned' }}"
+            },
+            {
+              "id": "p5",
+              "name": "SenderEmail",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.SenderEmail }}"
+            },
+            {
+              "id": "p6",
+              "name": "SenderName",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.SenderName }}"
+            },
+            {
+              "id": "p7",
+              "name": "Subject",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.Subject }}"
+            },
+            {
+              "id": "p8",
+              "name": "Message",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.Message }}"
+            },
+            {
+              "id": "p9",
+              "name": "MessageId",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.MessageId }}"
+            },
+            {
+              "id": "p10",
+              "name": "ReceivedAt",
+              "type": "string",
+              "value": "={{ $('Extract Reply Details').item.json.ReceivedAt }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "f2a9ff4c-55d8-44c6-8b2d-e32a083bcd10",
+      "name": "Prepare EspoCRM Lead Context",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        848,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Prepare EspoCRM Lead Context').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cCReplyReceived\": true,\n  \"cCLastCustomerMessage\": $('Prepare EspoCRM Lead Context').item.json.Message\n} }}",
+        "options": {}
+      },
+      "id": "ca107a66-bee3-4edb-abaf-70cfa06bfa2f",
+      "name": "Save Customer Reply - EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1072,
+        400
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"parentType\": \"Lead\",\n  \"parentId\": $('Prepare EspoCRM Lead Context').item.json.EspoCRMRecordId,\n  \"post\":\n    \"Customer email reply received.\\n\\n\" +\n    \"From: \" +\n    $('Prepare EspoCRM Lead Context').item.json.SenderName +\n    \" <\" +\n    $('Prepare EspoCRM Lead Context').item.json.SenderEmail +\n    \">\\n\\n\" +\n    \"Subject: \" +\n    $('Prepare EspoCRM Lead Context').item.json.Subject +\n    \"\\n\\n\" +\n    \"Customer Message:\\n\" +\n    $('Prepare EspoCRM Lead Context').item.json.Message +\n    \"\\n\\n\" +\n    \"Received At: \" +\n    $('Prepare EspoCRM Lead Context').item.json.ReceivedAt +\n    \"\\n\" +\n    \"Channel: Email\"\n} }}",
+        "options": {}
+      },
+      "id": "355cd58f-f497-4367-b9e1-fd306d065d3e",
+      "name": "Create Customer Reply Activity - EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1296,
+        400
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are an AI CRM assistant for a Dubai real estate and property investment sales team.\n\nYour job is to analyze an incoming customer email reply and classify the customer's intent, sentiment, priority, meeting request, callback request, and recommended sales action.\n\nINTENT RULES:\n\nInterested:\nCustomer clearly expresses interest in investing, purchasing, learning more, proceeding, discussing opportunities, or working with the company.\n\nMore Information:\nCustomer primarily asks for more information, project details, prices, brochures, ROI, availability, payment plans, locations, or investment details.\n\nMeeting:\nCustomer asks to arrange, schedule, book, or have a meeting with the team.\n\nCallback:\nCustomer asks someone to call, phone, contact, or call them back.\n\nNot Interested:\nCustomer explicitly states they are not interested, do not want the offer, or asks not to be contacted.\n\nGeneral:\nUse only when none of the above categories reasonably applies.\n\nIMPORTANT:\nIf a customer expresses investment interest AND requests a meeting, Intent must be \"Meeting\".\nIf a customer expresses investment interest AND requests a phone call, Intent must be \"Callback\".\nMeeting and Callback requests take priority over Interested.\n\nPRIORITY RULES:\n\nHigh:\nMeeting requested, callback requested, strong buying/investment intent, or customer wants immediate sales contact.\n\nMedium:\nInterested or requesting information but no direct meeting/callback request.\n\nLow:\nGeneral inquiry, unclear interest, or not interested.\n\nSENTIMENT:\nReturn only:\nPositive\nNeutral\nNegative\n\nRecommendedAction should be a short actionable instruction for the sales team.\n\nSummary should be a concise CRM-ready summary of the customer's latest reply.\n\nReturn ONLY a valid JSON object.\n\nUse exactly this structure:\n\n{\n  \"Intent\": \"Interested\",\n  \"Sentiment\": \"Positive\",\n  \"Priority\": \"High\",\n  \"MeetingRequested\": false,\n  \"CallbackRequested\": false,\n  \"RecommendedAction\": \"Contact customer to discuss investment requirements\",\n  \"Summary\": \"Customer is interested in Dubai property investment.\"\n}\n\nDo not include markdown.\nDo not include ```json.\nDo not include explanations outside the JSON."
+            },
+            {
+              "content": "=Analyze this customer's latest reply and classify the customer's current intent.\n\nESPOCRM LEAD INFORMATION\n\nLead Name:\n{{ $('Prepare EspoCRM Lead Context').item.json.LeadName }}\n\nCurrent Lead Status:\n{{ $('Prepare EspoCRM Lead Context').item.json.CurrentLeadStatus }}\n\nAssigned User:\n{{ $('Prepare EspoCRM Lead Context').item.json.AssignedUser }}\n\n\nCUSTOMER INFORMATION\n\nCustomer Name:\n{{ $('Prepare EspoCRM Lead Context').item.json.SenderName }}\n\nCustomer Email:\n{{ $('Prepare EspoCRM Lead Context').item.json.SenderEmail }}\n\nEmail Subject:\n{{ $('Prepare EspoCRM Lead Context').item.json.Subject }}\n\n\nCUSTOMER'S LATEST REPLY:\n\n{{ $('Prepare EspoCRM Lead Context').item.json.Message }}\n\n\nCURRENT DATE AND TIME\n\nCurrent Dubai/UAE Date:\n{{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd') }}\n\nCurrent Dubai/UAE Date and Time:\n{{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd HH:mm') }}\n\n\nIMPORTANT\n\nAnalyze ONLY the customer's latest reply.\n\nDo not classify based on:\n- quoted older emails\n- email signatures\n- previous company messages\n- previous customer replies included in the email thread\n- historical conversation content\n\nThe customer's latest reply always has priority when determining the current intent.\n\n\nCLASSIFY INTENT USING EXACTLY ONE OF THESE VALUES:\n\nHigh Intent\nInterested\nRequesting Information\nMeeting Request\nCallback Request\nLost\nNot Interested\nGeneral Reply\n\n\nINTENT CLASSIFICATION RULES\n\n\n1. HIGH INTENT\n\nUse \"High Intent\" when the customer clearly shows strong buying or investment\nintent and appears ready for immediate sales action.\n\nExamples:\n\n- \"I am ready to invest.\"\n- \"How can I make the payment?\"\n- \"I want to reserve this property.\"\n- \"Please send the booking details.\"\n- \"I want to proceed with the investment.\"\n- \"Where can I pay the booking amount?\"\n- \"I want to book this unit.\"\n- \"Please prepare the reservation.\"\n\n\n2. INTERESTED\n\nUse \"Interested\" when the customer expresses positive interest but is not yet\nrequesting specific information, a meeting, callback, or immediate transaction.\n\nExamples:\n\n- \"I am interested.\"\n- \"This investment looks interesting.\"\n- \"I would like to explore this opportunity.\"\n- \"This project may be suitable for me.\"\n- \"I am considering this investment.\"\n\n\n3. REQUESTING INFORMATION\n\nUse \"Requesting Information\" when the customer asks for information,\ndocuments, pricing, availability, ROI information, brochures, payment plans,\nproject details, investment details, or clarification.\n\nExamples:\n\n- \"Please send me more details.\"\n- \"What is the expected ROI?\"\n- \"Can you send the brochure?\"\n- \"What units are available?\"\n- \"Please send the payment plan.\"\n- \"What is the minimum investment?\"\n- \"Can you explain the investment structure?\"\n- \"Please send the project location.\"\n\n\n4. MEETING REQUEST\n\nUse \"Meeting Request\" when the customer explicitly asks to arrange, schedule,\nbook, confirm, or attend a meeting, consultation, Zoom call, video meeting,\noffice visit, or appointment.\n\nExamples:\n\n- \"Can we meet tomorrow?\"\n- \"Schedule a meeting for Monday.\"\n- \"I would like to visit your office.\"\n- \"Can we arrange a Zoom meeting?\"\n- \"Let's meet next Tuesday.\"\n- \"Can we meet on Monday at 3 PM?\"\n- \"Please arrange a consultation.\"\n\n\n5. CALLBACK REQUEST\n\nUse \"Callback Request\" when the customer specifically asks to receive a\nphone call.\n\nExamples:\n\n- \"Please call me.\"\n- \"Can someone call me tomorrow?\"\n- \"Call me after 5 PM.\"\n- \"Please ask your sales team to call me.\"\n- \"Can you call me this afternoon?\"\n- \"Give me a call when possible.\"\n\n\n6. LOST\n\nUse \"Lost\" when the lead has chosen, purchased, booked, invested with, or\ndecided to proceed with another developer, property, agent, company,\ninvestment, project, or competitor.\n\nExamples:\n\n- \"I purchased a property from another developer.\"\n- \"I decided to go with another developer.\"\n- \"I already bought another property.\"\n- \"I invested somewhere else.\"\n- \"We selected another project.\"\n- \"I have already booked with another company.\"\n- \"I chose another agent.\"\n- \"I already purchased from another developer.\"\n- \"We decided to proceed with another investment.\"\n\n\nCRITICAL LOST RULE\n\nIf the customer says they selected, purchased, booked, invested in, or\ndecided to proceed with another developer, property, agent, company,\nproject, investment, or competitor:\n\nIntent MUST be:\n\nLost\n\nDo NOT classify this as \"Not Interested\".\n\n\n7. NOT INTERESTED\n\nUse \"Not Interested\" when the customer rejects the opportunity or asks not\nto be contacted, but DOES NOT indicate that they selected a competitor or\nalternative investment/property.\n\nExamples:\n\n- \"I am not interested.\"\n- \"Please stop contacting me.\"\n- \"Remove me from your list.\"\n- \"I don't want to invest.\"\n- \"I am no longer interested.\"\n- \"Please don't follow up.\"\n- \"I don't want this opportunity.\"\n\n\n8. GENERAL REPLY\n\nUse \"General Reply\" when the message does not clearly fit any category above.\n\nExamples:\n\n- \"Thank you.\"\n- \"Received.\"\n- \"Okay.\"\n- \"I will check.\"\n- \"Thanks for the email.\"\n- \"Noted.\"\n- \"I will review it.\"\n\n\nIMPORTANT DECISION PRIORITY\n\nWhen multiple intent signals appear in the same latest customer message,\nuse the following priority:\n\n1. Lost\n2. Meeting Request\n3. Callback Request\n4. Requesting Information\n5. High Intent\n6. Interested\n7. Not Interested\n8. General Reply\n\n\nLOST PRIORITY EXCEPTION\n\nUse \"Lost\" only when there is actual evidence that the customer has selected,\npurchased, booked, invested with, or decided to proceed with an alternative\ndeveloper, property, agent, company, investment, project, or competitor.\n\nDo not classify a simple rejection as Lost.\n\nExample:\n\n\"I am not interested.\"\n\nIntent:\nNot Interested\n\nBut:\n\n\"I am not interested because I purchased from another developer.\"\n\nIntent:\nLost\n\n\nPRIORITY RULES\n\nUse exactly one of:\n\nHigh\nMedium\nLow\n\n\nHIGH PRIORITY\n\nUse High when there is:\n\n- immediate buying/investment intent\n- booking/reservation intent\n- payment intent\n- urgent meeting request\n- urgent callback request\n- immediate sales action required\n\n\nMEDIUM PRIORITY\n\nUse Medium when there is:\n\n- general interest\n- request for information\n- normal meeting request\n- normal callback request\n- customer actively evaluating the opportunity\n\n\nLOW PRIORITY\n\nUse Low when there is:\n\n- Not Interested\n- Lost\n- general acknowledgement\n- General Reply\n- no immediate sales action required\n\n\nSENTIMENT\n\nUse exactly one of:\n\nPositive\nNeutral\nNegative\n\n\nPOSITIVE\n\nUse when the customer shows interest, enthusiasm, willingness to proceed,\nor constructive engagement.\n\n\nNEUTRAL\n\nUse when the message is informational, factual, acknowledgement-based,\nor does not contain clear positive or negative emotion.\n\n\nNEGATIVE\n\nUse when the customer rejects the opportunity, expresses dissatisfaction,\nasks not to be contacted, or indicates that the opportunity has been lost.\n\n\nMEETING REQUESTED\n\nSet:\n\nMeetingRequested = true\n\nONLY when the customer explicitly requests, proposes, schedules, confirms,\nor agrees to a meeting or appointment.\n\nThis includes:\n\n- physical meeting\n- office meeting\n- consultation\n- Zoom meeting\n- video meeting\n- appointment\n- property/project meeting\n\nOtherwise:\n\nMeetingRequested = false\n\n\nCALLBACK REQUESTED\n\nSet:\n\nCallbackRequested = true\n\nONLY when the customer explicitly asks to receive a phone call.\n\nOtherwise:\n\nCallbackRequested = false\n\n\nMEETING DATE AND TIME EXTRACTION\n\nThe reference date for all date calculations is the current Dubai/UAE date:\n\n{{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd') }}\n\nThe reference date and time is:\n\n{{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd HH:mm') }}\n\n\nIf the customer requests or confirms a meeting, extract the meeting date\nand time ONLY from the customer's latest reply.\n\n\nSUGGESTED MEETING DATE\n\nSuggestedMeetingDate:\n\nReturn the meeting date in:\n\nYYYY-MM-DD\n\nformat when the customer's meeting date can be reliably determined.\n\nOtherwise return:\n\nnull\n\n\nSUGGESTED MEETING TIME\n\nSuggestedMeetingTime:\n\nReturn the meeting time using 24-hour format:\n\nHH:mm\n\nwhen the customer's meeting time can be reliably determined.\n\nOtherwise return:\n\nnull\n\n\nDATE RESOLUTION RULES\n\n1. Always interpret relative dates using the current Dubai/UAE date supplied\nabove.\n\n2. Never assume an old year.\n\n3. If the customer provides a day and month but does not provide a year,\nselect the next valid occurrence of that date that is not in the past.\n\nExample:\n\nReference date:\n2026-08-22\n\nCustomer says:\n\n\"Can we meet on 24 August at 3 PM?\"\n\nReturn:\n\nSuggestedMeetingDate = \"2026-08-24\"\nSuggestedMeetingTime = \"15:00\"\n\n\n4. If the customer provides a weekday together with a day and month,\nverify that the resolved calendar date matches the stated weekday.\n\nExample:\n\nReference date:\n2026-08-22\n\nCustomer says:\n\n\"Can we meet Monday, 24 August at 3 PM?\"\n\nReturn:\n\nSuggestedMeetingDate = \"2026-08-24\"\nSuggestedMeetingTime = \"15:00\"\n\n\n5. If a day/month combination has already passed in the current year,\nuse the next future occurrence unless the customer explicitly specifies\na year.\n\nExample:\n\nReference date:\n2026-08-22\n\nCustomer says:\n\n\"Let's meet on 10 August.\"\n\nBecause 10 August 2026 has already passed, use the next valid future\noccurrence:\n\nSuggestedMeetingDate = \"2027-08-10\"\n\n\n6. Interpret \"today\" relative to the current Dubai/UAE date.\n\n7. Interpret \"tomorrow\" as the day immediately after the current Dubai/UAE\ndate.\n\n8. Interpret \"day after tomorrow\" relative to the current Dubai/UAE date.\n\n9. Interpret weekday expressions such as:\n\n- Monday\n- this Monday\n- next Monday\n- Friday\n- this Friday\n- next Friday\n\nrelative to the current Dubai/UAE date.\n\nThe resolved date must be a valid future or current meeting date.\n\n\n10. If the customer provides an explicit full date including the year,\nuse that year unless the date is clearly impossible or contradictory.\n\n\n11. If the customer provides a date but NO meeting time:\n\nReturn the resolved date.\n\nSuggestedMeetingTime = null\n\n\n12. If the customer provides a meeting time but NO reliable meeting date:\n\nSuggestedMeetingDate = null\n\nReturn the time if it can be reliably determined.\n\n\n13. Convert normal AM/PM time into 24-hour HH:mm format.\n\nExamples:\n\n9 AM = \"09:00\"\n\n11:30 AM = \"11:30\"\n\n1 PM = \"13:00\"\n\n3 PM = \"15:00\"\n\n5:30 PM = \"17:30\"\n\n8 PM = \"20:00\"\n\n\n14. If the customer says:\n\n\"Can we meet Monday afternoon?\"\n\nResolve Monday if reliable, but because there is no exact meeting time:\n\nSuggestedMeetingDate = resolved Monday date\nSuggestedMeetingTime = null\n\n\n15. If the customer only says something such as:\n\n\"Let's arrange a meeting.\"\n\n\"I would like a meeting.\"\n\n\"Can we schedule a meeting?\"\n\n\"I want to meet your team.\"\n\nwithout providing a reliable date or time:\n\nMeetingRequested = true\nSuggestedMeetingDate = null\nSuggestedMeetingTime = null\n\n\n16. Never invent a meeting date.\n\n17. Never invent a meeting time.\n\n18. Never choose an arbitrary meeting time for expressions such as:\n\n- morning\n- afternoon\n- evening\n- later\n- sometime tomorrow\n- after lunch\n\nIf there is no specific reliable time, return:\n\nSuggestedMeetingTime = null\n\n\nTIMEZONE RULES\n\nUse Dubai/UAE timezone by default:\n\nAsia/Dubai\n\nunless the customer explicitly specifies another timezone.\n\nIf the customer explicitly says \"Dubai time\", interpret the supplied time\nas Dubai/UAE time.\n\nDo not change a clearly provided Dubai meeting time.\n\n\nRECOMMENDED ACTION\n\nProvide one short and practical action that the sales team should take next.\n\nExamples:\n\nHigh Intent:\n\"Contact the customer immediately to proceed with the investment.\"\n\nRequesting Information:\n\"Send the requested project and investment information.\"\n\nMeeting Request with reliable date/time:\n\"Confirm and schedule the requested meeting.\"\n\nMeeting Request without reliable date/time:\n\"Contact the customer to confirm a suitable meeting date and time.\"\n\nCallback Request:\n\"Call the customer as requested.\"\n\nLost:\n\"Mark the lead as Lost and remove it from active sales follow-up.\"\n\nNot Interested:\n\"Mark the lead as Not Interested and stop active follow-up.\"\n\nGeneral Reply:\n\"No immediate sales action required.\"\n\n\nSUMMARY\n\nProvide a concise summary of:\n\n- what the customer said\n- their current intent\n- any important requested action\n\nDo not include unnecessary information.\n\nBase the summary ONLY on the customer's latest reply.\n\n\nFINAL VALIDATION\n\nBefore returning the result, verify:\n\n1. Intent is exactly one of the allowed intent values.\n\n2. Sentiment is exactly:\nPositive\nNeutral\nor Negative.\n\n3. Priority is exactly:\nHigh\nMedium\nor Low.\n\n4. MeetingRequested is a boolean:\ntrue or false.\n\n5. CallbackRequested is a boolean:\ntrue or false.\n\n6. SuggestedMeetingDate is either:\nYYYY-MM-DD\nor null.\n\n7. SuggestedMeetingTime is either:\nHH:mm\nor null.\n\n8. A meeting date must not be invented.\n\n9. A meeting time must not be invented.\n\n10. A missing meeting date/time must use null, not an empty string.\n\n11. Lost must take priority when the customer clearly chose or completed\nan alternative/competitor transaction.\n\n12. Analyze only the latest customer reply.\n\n\nREQUIRED OUTPUT FIELDS\n\nReturn exactly these fields:\n\nIntent\nSentiment\nPriority\nMeetingRequested\nCallbackRequested\nSuggestedMeetingDate\nSuggestedMeetingTime\nRecommendedAction\nSummary\n\n\nReturn only the required structured output.\n\nDo not include markdown.\n\nDo not include ```json.\n\nDo not include explanations outside the structured output."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "maxTokens": 800,
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.2
+        }
+      },
+      "id": "265c2c3d-0f1b-422a-baa1-09371899df1b",
+      "name": "OpenAI - Analyze Reply",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const raw = $json.output &&\n            $json.output[0] &&\n            $json.output[0].content &&\n            $json.output[0].content[0]\n  ? $json.output[0].content[0].text\n  : undefined;\n\nlet ai = {};\n\nif (typeof raw === 'string') {\n  try {\n    ai = JSON.parse(raw);\n  } catch (e) {\n    ai = {};\n  }\n} else if (raw && typeof raw === 'object') {\n  ai = raw;\n}\n\nconst prep = $('Prepare EspoCRM Lead Context').item.json;\nconst ext = $('Extract Reply Details').item.json;\n\n// Map OpenAI intent to EXACT EspoCRM / routing values\nconst intentMap = {\n  'High Intent': 'High Intent',\n  'Interested': 'Interested',\n\n  'More Information': 'Requesting Information',\n  'Requesting Information': 'Requesting Information',\n\n  'Meeting': 'Meeting Request',\n  'Meeting Requested': 'Meeting Request',\n  'Meeting Request': 'Meeting Request',\n\n  'Callback Requested': 'Callback Request',\n  'Callback Request': 'Callback Request',\n\n  'Researching': 'Researching',\n\n  'Not Interested': 'Not Interested',\n\n  // IMPORTANT: Lost must stay Lost\n  'Lost': 'Lost',\n\n  'Unknown': 'Unclear',\n  'Unclear': 'Unclear',\n\n  'General Reply': 'Not Classified',\n  'Not Classified': 'Not Classified'\n};\n\nconst intent = intentMap[ai.Intent] || 'Not Classified';\n\n\n// ----------------------------------------------------\n// MEETING DATE / TIME\n// ----------------------------------------------------\n\n// Only keep meeting date/time when OpenAI actually returned them.\n// Do NOT invent or default a meeting date/time.\nconst suggestedMeetingDate =\n  ai.SuggestedMeetingDate &&\n  typeof ai.SuggestedMeetingDate === 'string'\n    ? ai.SuggestedMeetingDate.trim()\n    : null;\n\nconst suggestedMeetingTime =\n  ai.SuggestedMeetingTime &&\n  typeof ai.SuggestedMeetingTime === 'string'\n    ? ai.SuggestedMeetingTime.trim()\n    : null;\n\n\n// ----------------------------------------------------\n// FINAL OUTPUT\n// ----------------------------------------------------\n\nreturn {\n  EspoCRMRecordId: prep.EspoCRMRecordId,\n  LeadName: prep.LeadName,\n  CurrentLeadStatus: prep.CurrentLeadStatus,\n  AssignedUser: prep.AssignedUser,\n\n  SenderEmail: ext.SenderEmail,\n  SenderName: ext.SenderName,\n  Subject: ext.Subject,\n  Message: ext.Message,\n  MessageId: ext.MessageId,\n  ReceivedAt: ext.ReceivedAt,\n\n  Intent: intent,\n\n  Sentiment:\n    ai.Sentiment || 'Neutral',\n\n  Priority:\n    ai.Priority || 'Medium',\n\n  MeetingRequested:\n    ai.MeetingRequested === true ||\n    intent === 'Meeting Request',\n\n  CallbackRequested:\n    ai.CallbackRequested === true ||\n    intent === 'Callback Request',\n\n  // Meeting scheduling fields\n  SuggestedMeetingDate: suggestedMeetingDate,\n  SuggestedMeetingTime: suggestedMeetingTime,\n\n  RecommendedAction:\n    ai.RecommendedAction || '',\n\n  Summary:\n    ai.Summary || ''\n};"
+      },
+      "id": "d5d73f3b-8735-454f-a09e-fc62e389242d",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1792,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cCAIIntent\": $('Parse AI Response').item.json.Intent,\n  \"cCSentiment\": $('Parse AI Response').item.json.Sentiment,\n  \"cCAIPriority\": $('Parse AI Response').item.json.Priority,\n  \"cCAISummary\": $('Parse AI Response').item.json.Summary\n} }}",
+        "options": {}
+      },
+      "id": "b5968772-e4d3-4e63-bab7-2ad3018a4b36",
+      "name": "Update AI Analysis - EspoCRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2384,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "r_meeting",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Interested",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    }
+                  }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Interested"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "365c9d9d-d225-4714-a12f-c99bf4755ed8",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Requesting Information",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "More Information"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "fc2ceab4-d0fb-4b47-b246-5a214b847b6d",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Meeting Request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Meeting Request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "cba88e0f-ef61-49a2-885a-21fcbe1339eb",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Callback Request",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Callback Request"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f41dc145-6bd1-49f4-835f-4eceb761eae6",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Lost",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Lost"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "f3cc8c55-dc5b-44c0-9032-fe2e4ccea72d",
+                    "leftValue": "={{ $('Parse AI Response').item.json.Intent }}",
+                    "rightValue": "Not Interested",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Not Interested"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "renameFallbackOutput": "General Reply"
+        }
+      },
+      "id": "c64d3b6d-e832-4e73-a94d-b2ad92cd2797",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        5056,
+        608
+      ]
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"status\": \"Contacted\"\n}\n}}",
+        "options": {}
+      },
+      "id": "dcd87f4b-150e-4509-be5b-4302c00e818b",
+      "name": "Update Lead - Interested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5376,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"parentType\": \"Lead\",\n  \"parentId\": $('Parse AI Response').item.json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\": 'Customer reply classified as INTERESTED.\\n\\nSentiment: ' + $('Parse AI Response').item.json.Sentiment + '\\nPriority: ' + $('Parse AI Response').item.json.Priority + '\\nAI Summary: ' + $('Parse AI Response').item.json.AISummary + '\\nRecommended Action: ' + $('Parse AI Response').item.json.RecommendedAction + '\\n\\nCustomer Message:\\n' + $('Parse AI Response').item.json.Message\n} }}",
+        "options": {}
+      },
+      "id": "2dbba611-f0e5-4324-b474-2e934294ca8e",
+      "name": "EspoCRM Activity - Interested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5664,
+        96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=HOT / INTERESTED CUSTOMER REPLY\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\nAssigned: {{ $('Parse AI Response').item.json.AssignedUser }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\nSentiment: {{ $('Parse AI Response').item.json.Sentiment }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.AISummary }}\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}\n\nEspoCRM Lead ID: {{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "otherOptions": {}
+      },
+      "id": "4a93fdfb-d55a-494d-b895-8336214d52dd",
+      "name": "Slack Notification - Interested",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        5888,
+        96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Task",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"name\": 'Follow up with interested lead: ' + $('Parse AI Response').item.json.LeadName,\n  \"status\": \"Not Started\",\n  \"priority\": $('Parse AI Response').item.json.Priority,\n  \"parentType\": \"Lead\",\n  \"parentId\": $('Parse AI Response').item.json.EspoCRMRecordId,\n  \"description\": 'AI recommended action: ' + $('Parse AI Response').item.json.RecommendedAction + '\\n\\nCustomer message:\\n' + $('Parse AI Response').item.json.Message\n} }}",
+        "options": {}
+      },
+      "id": "f14065bd-7a44-4dbb-b74f-6ab89a99fb62",
+      "name": "Create EspoCRM Follow-up Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        6112,
+        96
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cConversationStatus\": \"Meeting Requested\",\n  \"cAiMeetingRequested\": true,\n  \"cSuggestedMeetingDate\": $('Parse AI Response').item.json.SuggestedMeetingDate,\n  \"cSuggestedMeetingTime\": $('Parse AI Response').item.json.SuggestedMeetingTime,\n  \"cRecommendedAction\": $('Parse AI Response').item.json.RecommendedAction\n} }}",
+        "options": {}
+      },
+      "id": "2df53dca-9412-4eb2-853f-4f10e2d5d66b",
+      "name": "Update Lead - Meeting Requested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5376,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "md1",
+              "leftValue": "={{ $('Parse AI Response').item.json.SuggestedMeetingDate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "ec46c88e-b14b-497d-b43b-633563f88d13",
+              "leftValue": "={{ $('Parse AI Response').item.json.SuggestedMeetingTime }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "14d8acc4-0061-4440-8190-dbec01504729",
+      "name": "Has Reliable Meeting Date?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5600,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CALENDAR_1",
+          "mode": "id"
+        },
+        "start": "={{ $('Parse AI Response').item.json.SuggestedMeetingDate + 'T' + $('Parse AI Response').item.json.SuggestedMeetingTime + ':00' }}",
+        "end": "={{ DateTime.fromISO(\n  $('Parse AI Response').item.json.SuggestedMeetingDate +\n  'T' +\n  $('Parse AI Response').item.json.SuggestedMeetingTime +\n  ':00'\n).plus({ hours: 1 }).toISO() }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Parse AI Response').item.json.SenderEmail }}"
+          ],
+          "description": "=Customer Email: {{ $('Parse AI Response').item.json.SenderEmail }}\n\nCustomer Name: {{ $('Parse AI Response').item.json.SenderName }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}",
+          "summary": "=Property Investment Consultation - {{ $('Parse AI Response').item.json.LeadName }}"
+        }
+      },
+      "id": "b66de289-e8e4-4af2-bcf8-04345212fa0c",
+      "name": "Create Google Calendar Event",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        5824,
+        528
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"parentType\": \"Lead\",\n  \"parentId\": $(\"Parse AI Response\").item.json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\":\n    \"MEETING SCHEDULED - Calendar event created.\\n\\n\" +\n    \"Customer: \" + $(\"Parse AI Response\").item.json.SenderName + \"\\n\" +\n    \"Customer Email: \" + $(\"Parse AI Response\").item.json.SenderEmail + \"\\n\" +\n    \"Meeting Date: \" + $(\"Parse AI Response\").item.json.SuggestedMeetingDate + \"\\n\" +\n    \"Meeting Time: \" + $(\"Parse AI Response\").item.json.SuggestedMeetingTime + \" Dubai Time\\n\\n\" +\n    \"Customer Message:\\n\" + $(\"Parse AI Response\").item.json.Message + \"\\n\\n\" +\n    \"AI Summary:\\n\" + $(\"Parse AI Response\").item.json.Summary + \"\\n\\n\" +\n    \"Recommended Action:\\n\" + $(\"Parse AI Response\").item.json.RecommendedAction + \"\\n\\n\" +\n    \"Google Calendar Event:\\n\" + $(\"Create Google Calendar Event\").item.json.htmlLink\n}\n}}",
+        "options": {}
+      },
+      "id": "be81776d-3ff7-49b8-9706-0dacbde438e9",
+      "name": "Create EspoCRM Meeting Activity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        6048,
+        528
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=📅 *MEETING SCHEDULED*\n\n*Lead:* {{ $('Parse AI Response').item.json.LeadName }}\n*Customer:* {{ $('Parse AI Response').item.json.SenderName }}\n*Email:* {{ $('Parse AI Response').item.json.SenderEmail }}\n\n🗓️ *Meeting Details*\n*Date:* {{ $('Parse AI Response').item.json.SuggestedMeetingDate }}\n*Time:* {{ $('Parse AI Response').item.json.SuggestedMeetingTime }} Dubai Time\n*Duration:* 1 Hour\n\n💬 *Customer Message*\n{{ $('Parse AI Response').item.json.Message }}\n\n🤖 *AI Analysis*\n*Intent:* {{ $('Parse AI Response').item.json.Intent }}\n*Priority:* {{ $('Parse AI Response').item.json.Priority }}\n*Sentiment:* {{ $('Parse AI Response').item.json.Sentiment }}\n\n📝 *AI Summary*\n{{ $('Parse AI Response').item.json.Summary }}\n\n🎯 *Recommended Action*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n✅ Google Calendar event created\n✅ Customer added as calendar attendee\n✅ EspoCRM meeting activity created\n\n🔗 *Google Calendar Event*\n{{ $('Create Google Calendar Event').item.json.htmlLink }}",
+        "otherOptions": {}
+      },
+      "id": "96a19753-64b5-4060-9cf1-1fe3ef4c68fb",
+      "name": "Slack Notification - Meeting Scheduled",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        6272,
+        528
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"parentType\": \"Lead\",\n  \"parentId\": $(\"Parse AI Response\").item.json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\":\n    \"MEETING REQUESTED - Date/time confirmation required.\\n\\n\" +\n    \"Customer: \" + $(\"Parse AI Response\").item.json.SenderName + \"\\n\" +\n    \"Customer Email: \" + $(\"Parse AI Response\").item.json.SenderEmail + \"\\n\\n\" +\n    \"Meeting Date: Not provided\\n\" +\n    \"Meeting Time: Not provided\\n\\n\" +\n    \"Customer Message:\\n\" + $(\"Parse AI Response\").item.json.Message + \"\\n\\n\" +\n    \"AI Summary:\\n\" + $(\"Parse AI Response\").item.json.Summary + \"\\n\\n\" +\n    \"Recommended Action:\\n\" + $(\"Parse AI Response\").item.json.RecommendedAction + \"\\n\\n\" +\n    \"ACTION REQUIRED: Sales team must contact the customer and confirm a suitable meeting date and time before creating the calendar event.\"\n}\n}}",
+        "options": {}
+      },
+      "id": "4bfe35d9-40cf-4000-9094-9d4257899b3c",
+      "name": "Create EspoCRM Meeting Activity (No Date)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5840,
+        736
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=📅 *MEETING REQUESTED — DATE/TIME CONFIRMATION REQUIRED*\n\n*Lead:* {{ $('Parse AI Response').item.json.LeadName }}\n*Customer:* {{ $('Parse AI Response').item.json.SenderName }}\n*Email:* {{ $('Parse AI Response').item.json.SenderEmail }}\n\n💬 *Customer Message*\n{{ $('Parse AI Response').item.json.Message }}\n\n🤖 *AI Analysis*\n*Intent:* {{ $('Parse AI Response').item.json.Intent }}\n*Priority:* {{ $('Parse AI Response').item.json.Priority }}\n*Sentiment:* {{ $('Parse AI Response').item.json.Sentiment }}\n\n📝 *AI Summary*\n{{ $('Parse AI Response').item.json.Summary }}\n\n🎯 *Recommended Action*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n⚠️ *ACTION REQUIRED*\nThe customer requested a meeting but did not provide a reliable date and time.\n\nPlease contact the customer to confirm:\n• Meeting date\n• Meeting time\n• Preferred meeting method\n\n✅ Meeting request saved in EspoCRM\n❌ Google Calendar event NOT created until date/time is confirmed",
+        "otherOptions": {}
+      },
+      "id": "fb7789ef-78bd-4f4b-96ea-8f54ef5db44a",
+      "name": "Slack Notification - Meeting (Confirm Time)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        6080,
+        736
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cConversationStatus\": \"Follow-up Required\",\n  \"cRecommendedAction\": $('Parse AI Response').item.json.RecommendedAction\n} }}",
+        "options": {}
+      },
+      "id": "48518c6c-96bc-4513-b7c3-6b912cc42a90",
+      "name": "Update Lead - Follow-up Required",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5408,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"parentType\": \"Lead\",\n  \"parentId\": $('Parse AI Response').item.json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\": 'Customer QUESTION / MORE INFORMATION request.\\n\\nQuestion: ' + $('Parse AI Response').item.json.Question + '\\n\\nAI Summary:\\n' + $('Parse AI Response').item.json.AISummary + '\\n\\nRecommended Action:\\n' + $('Parse AI Response').item.json.RecommendedAction + '\\n\\nCustomer Message:\\n' + $('Parse AI Response').item.json.Message\n} }}",
+        "options": {}
+      },
+      "id": "70d3a21f-eb8c-435a-96e1-24ad0685bcb6",
+      "name": "EspoCRM Activity - Question",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5648,
+        320
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=CUSTOMER QUESTION / INFO REQUEST\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\n\nQuestion:\n{{ $('Parse AI Response').item.json.Question }}\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}",
+        "otherOptions": {}
+      },
+      "id": "2f7e6bf5-d5d4-415d-aa7b-608323fb3a6d",
+      "name": "Slack Notification - Question Received",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        5936,
+        320
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cAiCallbackRequested\": true,\n  \"cConversationStatus\": \"Callback Requested\",\n  \"cAiPriority\": $('Parse AI Response').item.json.Priority\n} }}",
+        "options": {}
+      },
+      "id": "c05869a0-3557-49df-8c20-b5608891e277",
+      "name": "Update Lead - Callback Requested",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5440,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Task",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"name\": \"n8n Task Test\",\n  \"status\": \"Not Started\",\n  \"assignedUserId\": \"6a8597921d1a96b05\"\n}",
+        "options": {}
+      },
+      "id": "8cc54914-575e-47ea-be26-0b986be76099",
+      "name": "Create EspoCRM Call Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5744,
+        960
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=CALLBACK REQUESTED\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.AISummary }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}",
+        "otherOptions": {}
+      },
+      "id": "99b1f7db-4816-49a9-8eb1-f91a7444baec",
+      "name": "Slack Notification - Callback Requested",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        6080,
+        960
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"status\": \"Lost\"\n}\n}}",
+        "options": {}
+      },
+      "id": "6ba79d17-9d9c-4c2e-bbb9-6aaab09ed93f",
+      "name": "Update Lead - Lost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5456,
+        1152
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Ke",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"name\": \"Lead Lost\",\n  \"post\": \"Lead has been classified as lost based on the customer's latest response.\",\n  \"parentType\": \"Lead\",\n  \"parentId\": $json.id\n}\n}}",
+        "options": {}
+      },
+      "id": "4d6bf724-170d-477c-90ec-cd33cd6d0d43",
+      "name": "EspoCRM Activity - Lost",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5760,
+        1152
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"cConversationStatus\": \"Reply Received\",\n  \"cAiSummary\": $('Parse AI Response').item.json.AISummary,\n  \"cRecommendedAction\": $('Parse AI Response').item.json.RecommendedAction\n} }}",
+        "options": {}
+      },
+      "id": "278eac30-22e1-4906-ac49-cbe8b5bf8249",
+      "name": "Update Lead - General Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5456,
+        1504
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ {\n  \"parentType\": \"Lead\",\n  \"parentId\": $('Parse AI Response').item.json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\": 'General customer reply logged.\\n\\nAI Summary:\\n' + $('Parse AI Response').item.json.AISummary + '\\n\\nRecommended Action:\\n' + $('Parse AI Response').item.json.RecommendedAction + '\\n\\nCustomer Message:\\n' + $('Parse AI Response').item.json.Message\n} }}",
+        "options": {}
+      },
+      "id": "f23f24f2-11c4-48e9-bc8f-597e2cabdd5d",
+      "name": "EspoCRM Activity - General Reply",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5808,
+        1504
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=UNMATCHED CUSTOMER EMAIL REPLY\n\nSender: {{ $('Extract Reply Details').item.json.SenderName }}\nEmail: {{ $('Extract Reply Details').item.json.SenderEmail }}\nSubject: {{ $('Extract Reply Details').item.json.Subject }}\n\nMessage:\n{{ $('Extract Reply Details').item.json.Message }}\n\nNo matching lead was found in EspoCRM. Please review manually.",
+        "otherOptions": {}
+      },
+      "id": "d16b2e6e-93f1-489c-ace7-062395d0aa1a",
+      "name": "Slack Alert - Lead Not Found",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        896,
+        784
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Parse AI Response').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"status\": \"Not Interested\"\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5472,
+        1328
+      ],
+      "id": "166be597-fb6b-44bc-bf63-bc550e2b3db2",
+      "name": "Update Lead - Not Interested"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"name\": \"Customer Not Interested\",\n  \"post\": \"Customer indicated they are not interested in the investment opportunity.\",\n  \"parentType\": \"Lead\",\n  \"parentId\": $json.id\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5696,
+        1328
+      ],
+      "id": "d01cadee-68bc-4387-8028-494775520d69",
+      "name": "EspoCRM Activity - Not Interested"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🚫 CUSTOMER NOT INTERESTED\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\n\nCustomer Reply:\n{{ $('Parse AI Response').item.json.Message }}\n\nAI Analysis:\nIntent: {{ $('Parse AI Response').item.json.Intent }}\nSentiment: {{ $('Parse AI Response').item.json.Sentiment }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nCRM Status: Not Interested\n\n⚠️ No further sales follow-up should be made unless the customer contacts us again.",
+        "otherOptions": {}
+      },
+      "id": "39c27ffc-4e31-41ed-ad61-6c7bea84f077",
+      "name": "Slack Notification - Not Interested",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        5936,
+        1328
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🔴 LEAD LOST\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\n\nCustomer Reply:\n{{ $('Parse AI Response').item.json.Message }}\n\nIntent: {{ $('Parse AI Response').item.json.Intent }}\nSentiment: {{ $('Parse AI Response').item.json.Sentiment }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nCRM Status: Lost\n\nThe lead has been marked as Lost in EspoCRM.",
+        "otherOptions": {}
+      },
+      "id": "2e2a01c9-bfa0-47b4-88b1-9f65da66fc58",
+      "name": "Slack Notification - Lost",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        5984,
+        1152
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const d = $json;\n\nconst intent = d.Intent || 'Not Classified';\n\nlet leadStatus = 'New';\n\n// Built-in EspoCRM status.\n// Start with the current status, then override only when appropriate.\nlet espoStatus = d.CurrentLeadStatus || 'New';\n\nlet needsMeeting = false;\nlet needsCallback = false;\nlet needsSlack = true;\nlet closeFollowUp = false;\n\n// Automatic follow-up date\nlet followUpDate = null;\n\nswitch (intent) {\n\n  case 'High Intent':\n    leadStatus = 'Interested';\n    espoStatus = 'New';\n\n    followUpDate = DateTime.now()\n      .setZone('Asia/Dubai')\n      .plus({ days: 1 })\n      .toFormat('yyyy-MM-dd');\n    break;\n\n  case 'Interested':\n    leadStatus = 'Interested';\n    espoStatus = 'New';\n\n    followUpDate = DateTime.now()\n      .setZone('Asia/Dubai')\n      .plus({ days: 1 })\n      .toFormat('yyyy-MM-dd');\n    break;\n\n  case 'Requesting Information':\n    leadStatus = 'Follow-up Required';\n    espoStatus = 'New';\n\n    followUpDate = DateTime.now()\n      .setZone('Asia/Dubai')\n      .plus({ days: 1 })\n      .toFormat('yyyy-MM-dd');\n    break;\n\n  case 'Meeting Request':\n    leadStatus = 'Meeting Requested';\n    espoStatus = 'New';\n    needsMeeting = true;\n    break;\n\n  case 'Callback Request':\n    leadStatus = 'Callback Requested';\n    espoStatus = 'New';\n    needsCallback = true;\n    break;\n\n  case 'Lost':\n    leadStatus = 'Lost';\n    espoStatus = 'Lost';\n    closeFollowUp = true;\n    followUpDate = null;\n    break;\n\n  case 'Not Interested':\n    leadStatus = 'Not Interested';\n    espoStatus = 'Lost';\n    closeFollowUp = true;\n    followUpDate = null;\n    break;\n\n  case 'Not Classified':\n  case 'General Reply':\n  default:\n    // Keep existing status for unclear/general replies.\n    leadStatus = d.CurrentLeadStatus || 'New';\n    espoStatus = d.CurrentLeadStatus || 'New';\n    break;\n}\n\nreturn {\n  ...d,\n\n  LeadStatusToSet: leadStatus,\n  EspoStatusToSet: espoStatus,\n\n  NeedsMeeting: needsMeeting,\n  NeedsCallback: needsCallback,\n  NeedsSlack: needsSlack,\n  CloseFollowUp: closeFollowUp,\n\n  FollowUpDateToSet: followUpDate,\n\n  ActionType:\n    needsMeeting\n      ? 'Meeting'\n      : needsCallback\n      ? 'Callback'\n      : 'Standard'\n};"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1984,
+        672
+      ],
+      "id": "3c8f1cc0-c61e-4e73-96eb-472f72b6df32",
+      "name": "Prepare Action Data"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": " X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"status\": $json.EspoStatusToSet,\n\n  \"cCAIIntent\": $json.Intent,\n  \"cCSentiment\": $json.Sentiment,\n  \"cCAIPriority\": $json.Priority,\n  \"cCAISummary\": $json.Summary,\n\n  \"cCLastCustomerMessage\": $json.Message,\n\n  \"cCReplyReceived\": true,\n\n  \"cCCallbackRequested\": $json.NeedsCallback,\n  \"cCCMeetingRequested\": $json.NeedsMeeting,\n\n  \"cCFollowUpDate\": $json.CloseFollowUp\n    ? null\n    : $json.FollowUpDateToSet\n}\n}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2176,
+        672
+      ],
+      "id": "327b4b03-d44f-47af-8965-0b859a0525e7",
+      "name": "Update Lead - Unified"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('Prepare Action Data').item.json.ActionType }}",
+                    "rightValue": "Meeting",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "7a76128e-3477-4aad-881b-b8c269fb0623"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Meeting"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "47be5b50-fac8-4c98-8ac3-169629293487",
+                    "leftValue": "={{ $('Prepare Action Data').item.json.ActionType }}",
+                    "rightValue": "Callback",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Callback"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "bbc60f40-fac8-4476-83bc-021292a765c7",
+                    "leftValue": "={{ $('Prepare Action Data').item.json.ActionType }}",
+                    "rightValue": "Standard",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Standard"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        3312,
+        656
+      ],
+      "id": "67b1cf1f-358a-4cec-a5bd-6e7078770e5e",
+      "name": "Action Router"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "md1",
+              "leftValue": "={{ $('Parse AI Response').item.json.SuggestedMeetingDate }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "ec46c88e-b14b-497d-b43b-633563f88d13",
+              "leftValue": "={{ $('Parse AI Response').item.json.SuggestedMeetingTime }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "7fbd1fb1-42e2-44ac-8204-1a8181ebbe4b",
+      "name": "Has Reliable Meeting Date?1",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3552,
+        544
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=CALLBACK REQUESTED\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\nPhone: {{ $('Update Lead - Unified').item.json.phoneNumber }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\nSentiment: {{ $('Parse AI Response').item.json.Sentiment }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}\n\nCallback Instruction:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}",
+        "otherOptions": {}
+      },
+      "id": "a3161f49-82e0-4c07-8dc7-15ec3cdce44a",
+      "name": "Slack Notification - Callback Requested1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3552,
+        720
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=CUSTOMER REPLY — {{ $('Parse AI Response').item.json.Intent }}\n\nLead: {{ $('Parse AI Response').item.json.LeadName }}\nEmail: {{ $('Parse AI Response').item.json.SenderEmail }}\nAssigned: {{ $('Parse AI Response').item.json.AssignedUser }}\n\nIntent: {{ $('Parse AI Response').item.json.Intent }}\nPriority: {{ $('Parse AI Response').item.json.Priority }}\nSentiment: {{ $('Parse AI Response').item.json.Sentiment }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}",
+        "otherOptions": {}
+      },
+      "id": "592e54c6-2113-4ced-9373-8c2c0dcb91b8",
+      "name": "Slack Notification - General Reply",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3552,
+        928
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=📅 *MEETING REQUESTED — DATE/TIME CONFIRMATION REQUIRED*\n\n*Lead:* {{ $('Parse AI Response').item.json.LeadName }}\n*Customer:* {{ $('Parse AI Response').item.json.SenderName }}\n*Email:* {{ $('Parse AI Response').item.json.SenderEmail }}\n\n💬 *Customer Message*\n{{ $('Parse AI Response').item.json.Message }}\n\n🤖 *AI Analysis*\n*Intent:* {{ $('Parse AI Response').item.json.Intent }}\n*Priority:* {{ $('Parse AI Response').item.json.Priority }}\n*Sentiment:* {{ $('Parse AI Response').item.json.Sentiment }}\n\n📝 *AI Summary*\n{{ $('Parse AI Response').item.json.Summary }}\n\n🎯 *Recommended Action*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n⚠️ *ACTION REQUIRED*\nThe customer requested a meeting but did not provide a reliable date and time.\n\nPlease contact the customer to confirm:\n• Meeting date\n• Meeting time\n• Preferred meeting method\n\n✅ Meeting request saved in EspoCRM\n❌ Google Calendar event NOT created until date/time is confirmed",
+        "otherOptions": {}
+      },
+      "id": "7a311b89-b4fb-46f2-8691-beca2648287f",
+      "name": "Slack Notification - Meeting (Confirm Time)1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        3760,
+        560
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CALENDAR_1",
+          "mode": "id"
+        },
+        "start": "={{ DateTime.fromISO(\n  $('Parse AI Response').item.json.SuggestedMeetingDate +\n  'T' +\n  $('Parse AI Response').item.json.SuggestedMeetingTime,\n  { zone: 'Asia/Dubai' }\n).toISO() }}",
+        "end": "={{ DateTime.fromISO(\n  $('Parse AI Response').item.json.SuggestedMeetingDate +\n  'T' +\n  $('Parse AI Response').item.json.SuggestedMeetingTime,\n  { zone: 'Asia/Dubai' }\n).plus({ hours: 1 }).toISO() }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Parse AI Response').item.json.SenderEmail }}"
+          ],
+          "description": "=Customer Email: {{ $('Parse AI Response').item.json.SenderEmail }}\n\nCustomer Name: {{ $('Parse AI Response').item.json.SenderName }}\n\nCustomer Message:\n{{ $('Parse AI Response').item.json.Message }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}",
+          "summary": "=Property Investment Consultation - {{ $('Parse AI Response').item.json.LeadName }}"
+        }
+      },
+      "id": "44cd34d1-b44f-4e1f-a125-8ea5b13c6c60",
+      "name": "Create Google Calendar Event1",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        3760,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{\n{\n  \"parentType\": \"Lead\",\n  \"parentId\": $(\"Parse AI Response\").first().json.EspoCRMRecordId,\n  \"type\": \"Post\",\n  \"post\":\n    \"MEETING SCHEDULED - Calendar event created.\\n\\n\" +\n    \"Customer: \" + $(\"Parse AI Response\").first().json.SenderName + \"\\n\" +\n    \"Customer Email: \" + $(\"Parse AI Response\").first().json.SenderEmail + \"\\n\" +\n    \"Meeting Date: \" + $(\"Parse AI Response\").first().json.SuggestedMeetingDate + \"\\n\" +\n    \"Meeting Time: \" + $(\"Parse AI Response\").first().json.SuggestedMeetingTime + \" Dubai Time\\n\\n\" +\n    \"Customer Message:\\n\" + $(\"Parse AI Response\").first().json.Message + \"\\n\\n\" +\n    \"AI Summary:\\n\" + $(\"Parse AI Response\").first().json.Summary + \"\\n\\n\" +\n    \"Recommended Action:\\n\" + $(\"Parse AI Response\").first().json.RecommendedAction + \"\\n\\n\" +\n    \"Google Calendar Event:\\n\" + $(\"Create Google Calendar Event1\").first().json.htmlLink\n}\n}}",
+        "options": {}
+      },
+      "id": "e9ad1535-fd49-4f87-94ca-0366036f05ae",
+      "name": "Create EspoCRM Meeting Activity1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3952,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=📅 *MEETING SCHEDULED*\n\n*Lead:* {{ $('Parse AI Response').first().json.LeadName }}\n*Customer:* {{ $('Parse AI Response').first().json.SenderName }}\n*Email:* {{ $('Parse AI Response').first().json.SenderEmail }}\n\n*Meeting Date:* {{ $('Parse AI Response').first().json.SuggestedMeetingDate }}\n*Meeting Time:* {{ $('Parse AI Response').first().json.SuggestedMeetingTime }} Dubai Time\n\n*Priority:* {{ $('Parse AI Response').first().json.Priority }}\n*Sentiment:* {{ $('Parse AI Response').first().json.Sentiment }}\n\n*Customer Message:*\n{{ $('Parse AI Response').first().json.Message }}\n\n*AI Summary:*\n{{ $('Parse AI Response').first().json.Summary }}\n\n*Recommended Action:*\n{{ $('Parse AI Response').first().json.RecommendedAction }}\n\n*Google Calendar:*\n{{ $('Create Google Calendar Event1').first().json.htmlLink }}",
+        "otherOptions": {}
+      },
+      "id": "93579c38-eeed-4675-87f0-ddc3ed1d2bdb",
+      "name": "Slack Notification - Meeting Scheduled1",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        4144,
+        384
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2592,
+        672
+      ],
+      "id": "eab5fe23-4847-4d87-aaf5-6ee08bf989fd",
+      "name": "Get Lead for Opportunity"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8df80f69-059d-430f-b6ed-5ca10dc1da14",
+              "leftValue": "={{ $json.createdOpportunityId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2800,
+        672
+      ],
+      "id": "cf0a05de-743a-4c19-8efd-0bc5583edf3f",
+      "name": "Opportunity Linked?"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Opportunity/{{ $json.createdOpportunityId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  cAiLeadScore: Number($json.cCAILeadScore || 0),\n\n  cAiPriority: ['Low', 'Medium', 'High', 'Urgent'].includes($json.cCAIPriority)\n    ? $json.cCAIPriority\n    : 'Not Set',\n\n  cAiIntent: [\n    'High Intent',\n    'Interested',\n    'Requesting Information',\n    'Meeting Request',\n    'Callback Request',\n    'Lost',\n    'Not Interested',\n    'General Reply'\n  ].includes($json.cCAIIntent)\n    ? $json.cCAIIntent\n    : 'Not Set',\n\n  cAiSummary: $json.cCAISummary || '',\n\n  cRecommendedAction: $json.cCRecommendedAction || '',\n\n  cLastCustomerMessage: $json.cCLastCustomerMessage || $json.cMessage || '',\n\n  cFollowUpCount: Number($json.cCFollowUpCount || 0),\n\n  cCallbackRequested: Boolean($json.cCCallbackRequested),\n\n  cMeetingRequested: Boolean($json.cCCMeetingRequested),\n\n  cReplyReceived: true,\n\n  cFollowUpDate: $json.cCFollowUpDate || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        3040,
+        560
+      ],
+      "id": "3fe16a90-7efb-4970-89f8-6857541fdd1d",
+      "name": "Update Opportunity from Reply"
+    }
+  ],
+  "connections": {
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Extract Reply Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Reply Details": {
+      "main": [
+        [
+          {
+            "node": "Search Lead - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Lead - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Lead Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Found?": {
+      "main": [
+        [
+          {
+            "node": "Prepare EspoCRM Lead Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Alert - Lead Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare EspoCRM Lead Context": {
+      "main": [
+        [
+          {
+            "node": "Save Customer Reply - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Customer Reply - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Create Customer Reply Activity - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Customer Reply Activity - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Analyze Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Analyze Reply": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Prepare Action Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update AI Analysis - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Get Lead for Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Update Lead - Interested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - Follow-up Required",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - Meeting Requested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - Callback Requested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - Lost",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - Not Interested",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead - General Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Interested": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Activity - Interested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Activity - Interested": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Interested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Notification - Interested": {
+      "main": [
+        [
+          {
+            "node": "Create EspoCRM Follow-up Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Meeting Requested": {
+      "main": [
+        [
+          {
+            "node": "Has Reliable Meeting Date?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reliable Meeting Date?": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar Event",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create EspoCRM Meeting Activity (No Date)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar Event": {
+      "main": [
+        [
+          {
+            "node": "Create EspoCRM Meeting Activity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create EspoCRM Meeting Activity": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Meeting Scheduled",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create EspoCRM Meeting Activity (No Date)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Meeting (Confirm Time)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Follow-up Required": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Activity - Question",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Activity - Question": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Question Received",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Callback Requested": {
+      "main": [
+        [
+          {
+            "node": "Create EspoCRM Call Task",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create EspoCRM Call Task": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Callback Requested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Lost": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Activity - Lost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - General Reply": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Activity - General Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Not Interested": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Activity - Not Interested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Activity - Not Interested": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Not Interested",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Activity - Lost": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Lost",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Action Data": {
+      "main": [
+        [
+          {
+            "node": "Update Lead - Unified",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead - Unified": {
+      "main": [
+        [
+          {
+            "node": "Update AI Analysis - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Action Router": {
+      "main": [
+        [
+          {
+            "node": "Has Reliable Meeting Date?1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Notification - Callback Requested1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Notification - General Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Reliable Meeting Date?1": {
+      "main": [
+        [
+          {
+            "node": "Create Google Calendar Event1",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Notification - Meeting (Confirm Time)1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Google Calendar Event1": {
+      "main": [
+        [
+          {
+            "node": "Create EspoCRM Meeting Activity1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create EspoCRM Meeting Activity1": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification - Meeting Scheduled1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Lead for Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Opportunity Linked?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Opportunity Linked?": {
+      "main": [
+        [
+          {
+            "node": "Update Opportunity from Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Action Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Opportunity from Reply": {
+      "main": [
+        [
+          {
+            "node": "Action Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

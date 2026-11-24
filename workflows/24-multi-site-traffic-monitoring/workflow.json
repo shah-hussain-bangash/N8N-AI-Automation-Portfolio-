@@ -1,0 +1,3285 @@
+{
+  "name": "SEO Monitoring Pipeline (GSC → Sheets → Slack)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 7
+            }
+          ]
+        }
+      },
+      "id": "f8adf183-d64a-4f6b-9a30-deec8885fc71",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -1504,
+        -1424
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/webmasters/v3/sites",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "id": "c965c159-8bcf-4993-9fa3-21f4c6061040",
+      "name": "List Search Console Sites",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -832,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sites = $input.first().json.siteEntry || [];\n\nreturn sites.map(site => ({\n  json: {\n    siteUrl: site.siteUrl,\n    permissionLevel: site.permissionLevel\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        288
+      ],
+      "id": "e64486da-bdbe-4a97-b050-0ff4e74d361e",
+      "name": "Split Search Console Sites"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\"\n  ],\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        -352
+      ],
+      "id": "3ca3c06c-617f-401f-bc67-a64e5d794993",
+      "name": "Fetch Search Analytics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites').all();\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const date =\n    row?.keys?.[0] ||\n    $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  return {\n    json: {\n      date: date,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n\n      recordKey: `${date}|${domain}`\n    }\n  };\n\n});"
+      },
+      "id": "9ebabaec-daff-4249-898f-b180bb9dee73",
+      "name": "Clean Daily KPIs",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -352
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"page\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        128
+      ],
+      "id": "062f9387-d9a3-4003-a451-07913d565a36",
+      "name": "Fetch Page Performance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const pageUrl = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    let pagePath = '/';\n\n    try {\n      pagePath = new URL(pageUrl).pathname || '/';\n    } catch (error) {\n      pagePath = pageUrl\n        .replace(/^https?:\\/\\/[^/]+/i, '') || '/';\n    }\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(pageUrl)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        pageUrl: pageUrl,\n        pagePath: pagePath,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition: impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n        dataStatus: impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        128
+      ],
+      "id": "713c8bbb-f880-48f6-9873-ddf2a1c319fa",
+      "name": "Clean Page Performance"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "pageUrl": "={{ $json.pageUrl }}",
+            "pagePath": "={{ $json.pagePath }}",
+            "clicks": "={{ $json.clicks }}",
+            "impressions": "={{ $json.impressions }}",
+            "ctrPercent": "={{ $json.ctrPercent }}",
+            "averagePosition": "={{ $json.averagePosition }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pageUrl",
+              "displayName": "pageUrl",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "pagePath",
+              "displayName": "pagePath",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clicks",
+              "displayName": "clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "impressions",
+              "displayName": "impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ctrPercent",
+              "displayName": "ctrPercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "averagePosition",
+              "displayName": "averagePosition",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "55512d18-53f8-423c-ac69-367befed03bf",
+      "name": "Page_Performance",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1824,
+        -2048
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_2",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "permissionLevel": "={{ $json.permissionLevel }}",
+            "clicks": "={{ $json.clicks }}",
+            "impressions": "={{ $json.impressions }}",
+            "ctrPercent": "={{ $json.ctrPercent }}",
+            "averagePosition": "={{ $json.averagePosition }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "permissionLevel",
+              "displayName": "permissionLevel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clicks",
+              "displayName": "clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "impressions",
+              "displayName": "impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ctrPercent",
+              "displayName": "ctrPercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "averagePosition",
+              "displayName": "averagePosition",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c9abcf1b-04dc-401e-92c3-d970d42628d7",
+      "name": "Daily_Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2048,
+        -560
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 9 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        496
+      ],
+      "id": "6b4bab38-6eb4-4743-abfb-7a56149fb9fa",
+      "name": "Fetch Weekly Analytics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites').all();\n\nconst periodStart = $now.minus({ days: 9 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        496
+      ],
+      "id": "718c5dcf-6c8f-4dd6-ba73-312d6168ae00",
+      "name": "Clean Weekly KPIs"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_3",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "periodStart": "={{ $json.periodStart }}",
+            "periodEnd": "={{ $json.periodEnd }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "permissionLevel": "={{ $json.permissionLevel }}",
+            "clicks": "={{ $json.clicks }}",
+            "impressions": "={{ $json.impressions }}",
+            "ctrPercent": "={{ $json.ctrPercent }}",
+            "averagePosition": "={{ $json.averagePosition }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "periodStart",
+              "displayName": "periodStart",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "periodEnd",
+              "displayName": "periodEnd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "permissionLevel",
+              "displayName": "permissionLevel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clicks",
+              "displayName": "clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "impressions",
+              "displayName": "impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ctrPercent",
+              "displayName": "ctrPercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "averagePosition",
+              "displayName": "averagePosition",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c308ddf6-efbe-45e6-8a2a-dd035bbdac51",
+      "name": "Weekly_Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1840,
+        -1264
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 30 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        320
+      ],
+      "id": "f5833db1-bf21-4cbb-b4bb-4f24028ccb0d",
+      "name": "Fetch Monthly Analytics"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites').all();\n\nconst periodStart = $now.minus({ days: 30 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        320
+      ],
+      "id": "2d8df05f-d6da-484b-8296-61875edd3660",
+      "name": "Clean Monthly KPIs"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_4",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "periodStart": "={{ $json.periodStart }}",
+            "periodEnd": "={{ $json.periodEnd }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "permissionLevel": "={{ $json.permissionLevel }}",
+            "clicks": "={{ $json.clicks }}",
+            "impressions": "={{ $json.impressions }}",
+            "ctrPercent": "={{ $json.ctrPercent }}",
+            "averagePosition": "={{ $json.averagePosition }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "periodStart",
+              "displayName": "periodStart",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "periodEnd",
+              "displayName": "periodEnd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "permissionLevel",
+              "displayName": "permissionLevel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clicks",
+              "displayName": "clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "impressions",
+              "displayName": "impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ctrPercent",
+              "displayName": "ctrPercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "averagePosition",
+              "displayName": "averagePosition",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "117d839b-79a6-4208-8fdc-d453ad9bb9e7",
+      "name": "Monthly_Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1840,
+        -1648
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"query\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        208,
+        -64
+      ],
+      "id": "dcd3395b-40e2-4683-a03a-ee9faa587339",
+      "name": "Fetch Query Performance"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const query = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(query)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        permissionLevel: site.permissionLevel || '',\n        query: query,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition: impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n        dataStatus: impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        880,
+        -64
+      ],
+      "id": "e2d864f8-068b-4de1-948c-f543c13b0e5c",
+      "name": "Clean Query Performance"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_5",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "date": "={{ $json.date }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "permissionLevel": "={{ $json.permissionLevel }}",
+            "query": "={{ $json.query }}",
+            "clicks": "={{ $json.clicks }}",
+            "impressions": "={{ $json.impressions }}",
+            "ctrPercent": "={{ $json.ctrPercent }}",
+            "averagePosition": "={{ $json.averagePosition }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "permissionLevel",
+              "displayName": "permissionLevel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "query",
+              "displayName": "query",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "clicks",
+              "displayName": "clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "impressions",
+              "displayName": "impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ctrPercent",
+              "displayName": "ctrPercent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "averagePosition",
+              "displayName": "averagePosition",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "a2239a68-ca47-44a0-8030-d12ebc0b464f",
+      "name": "Query_Performance",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1824,
+        -2432
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\n// Search Console reporting date\nconst reportDate = items[0]?.date || '';\n\n// Actual date the workflow/report runs\nconst generatedDate = $now.toFormat('dd/MM/yyyy');\n\nconst totalWebsites = items.length;\n\nconst sitesWithData = items.filter(\n  x => Number(x.impressions || 0) > 0\n).length;\n\nconst noSearchData = totalWebsites - sitesWithData;\n\nconst totalClicks = items.reduce(\n  (sum, x) => sum + Number(x.clicks || 0),\n  0\n);\n\nconst totalImpressions = items.reduce(\n  (sum, x) => sum + Number(x.impressions || 0),\n  0\n);\n\nconst overallCtr = totalImpressions > 0\n  ? Number(((totalClicks / totalImpressions) * 100).toFixed(2))\n  : 0;\n\n// Weighted average position\nconst positionItems = items.filter(\n  x =>\n    Number(x.impressions || 0) > 0 &&\n    x.averagePosition !== null &&\n    x.averagePosition !== ''\n);\n\nconst weightedPositionTotal = positionItems.reduce(\n  (sum, x) =>\n    sum +\n    Number(x.averagePosition || 0) *\n    Number(x.impressions || 0),\n  0\n);\n\nconst weightedImpressions = positionItems.reduce(\n  (sum, x) => sum + Number(x.impressions || 0),\n  0\n);\n\nconst overallAveragePosition = weightedImpressions > 0\n  ? Number(\n      (weightedPositionTotal / weightedImpressions).toFixed(2)\n    )\n  : null;\n\n// Top 10 websites\nconst topSites = [...items]\n  .filter(x => Number(x.impressions || 0) > 0)\n  .sort((a, b) => {\n    if (Number(b.clicks || 0) !== Number(a.clicks || 0)) {\n      return Number(b.clicks || 0) - Number(a.clicks || 0);\n    }\n\n    return Number(b.impressions || 0) - Number(a.impressions || 0);\n  })\n  .slice(0, 10);\n\n// Top 10 sites needing ranking attention\nconst attentionSites = [...items]\n  .filter(\n    x =>\n      Number(x.impressions || 0) > 0 &&\n      Number(x.averagePosition || 0) > 30\n  )\n  .sort(\n    (a, b) =>\n      Number(b.impressions || 0) -\n      Number(a.impressions || 0)\n  )\n  .slice(0, 10);\n\n// Top sites text\nconst topSitesText = topSites.length\n  ? topSites\n      .map(\n        (x, i) =>\n          `${i + 1}. ${x.domain} — ${x.clicks} clicks, ${x.impressions} impressions, ${x.ctrPercent}% CTR, Pos. ${x.averagePosition ?? '-'}`\n      )\n      .join('\\n')\n  : 'No sites with search data.';\n\n// Ranking attention text\nconst attentionText = attentionSites.length\n  ? attentionSites\n      .map(\n        (x, i) =>\n          `${i + 1}. ${x.domain} — ${x.impressions} impressions, Avg Pos. ${x.averagePosition}`\n      )\n      .join('\\n')\n  : 'No high-impression sites currently ranking below position 30.';\n\n// Slack message\nconst slackMessage =\n`📊 *Zenith Website SEO Daily Report*\n\n📅 *Report Generated:* ${generatedDate}\n🔎 *Search Console Data Date:* ${reportDate}\n\n*Portfolio Overview*\n• Websites Monitored: ${totalWebsites}\n• Websites With Search Data: ${sitesWithData}\n• No Search Data: ${noSearchData}\n• Total Clicks: ${totalClicks}\n• Total Impressions: ${totalImpressions}\n• Overall CTR: ${overallCtr}%\n• Weighted Avg Position: ${overallAveragePosition ?? '-'}\n\n🏆 *Top 10 Websites*\n${topSitesText}\n\n⚠️ *Top 10 Ranking Attention*\n${attentionText}\n\n📈 Full daily, weekly, 28-day, page and keyword data is available in the Zenith Website Views Monitoring dashboard.`;\n\nreturn [\n  {\n    json: {\n      generatedDate,\n      reportDate,\n      totalWebsites,\n      sitesWithData,\n      noSearchData,\n      totalClicks,\n      totalImpressions,\n      overallCtr,\n      overallAveragePosition,\n      slackMessage\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2256,
+        -560
+      ],
+      "id": "8b588dad-9c22-4133-bdb0-033c8cae54fe",
+      "name": "Build Slack Daily Summary"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/webmasters/v3/sites",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "id": "e3c7e6ae-245e-4814-91ac-cb39bee041ff",
+      "name": "List Search Console Sites 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -864,
+        -800
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sites = $input.first().json.siteEntry || [];\n\nreturn sites\n  .filter(site => site.permissionLevel !== 'siteUnverifiedUser')\n  .map(site => ({\n    json: {\n      siteUrl: site.siteUrl,\n      permissionLevel: site.permissionLevel\n    }\n  }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -400,
+        -560
+      ],
+      "id": "2afec2a9-2e03-4bdb-86ed-2cec1a31e31b",
+      "name": "Split Search Console Sites2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\"\n  ],\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        192,
+        -800
+      ],
+      "id": "881811c7-abf6-47e7-ac22-88a93f3ecb17",
+      "name": "Fetch Search Analytics2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites2').all();\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const date =\n    row?.keys?.[0] ||\n    $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  return {\n    json: {\n      date: date,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n\n      recordKey: `${date}|${domain}`\n    }\n  };\n\n});"
+      },
+      "id": "256c36e9-1a6c-490c-b2e5-72363f071192",
+      "name": "Clean Daily KPIs2",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        -800
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1328,
+        -576
+      ],
+      "id": "a819275f-6003-4c98-b652-97098af73a80",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\nconst unique = new Map();\n\nfor (const item of items) {\n\n  const key =\n    item.recordKey ||\n    `${item.date || ''}|${item.domain || ''}`;\n\n  if (!key) continue;\n\n  const existing = unique.get(key);\n\n  // If the same domain exists in both Google accounts,\n  // keep the record containing the stronger Search Console data.\n  if (!existing) {\n    unique.set(key, item);\n    continue;\n  }\n\n  const existingImpressions = Number(existing.impressions || 0);\n  const currentImpressions = Number(item.impressions || 0);\n\n  const existingClicks = Number(existing.clicks || 0);\n  const currentClicks = Number(item.clicks || 0);\n\n  if (\n    currentImpressions > existingImpressions ||\n    (\n      currentImpressions === existingImpressions &&\n      currentClicks > existingClicks\n    )\n  ) {\n    unique.set(key, item);\n  }\n}\n\nreturn Array.from(unique.values()).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -576
+      ],
+      "id": "06f66f4c-a0ed-4e7f-bd3b-ba783b6d7588",
+      "name": "Remove Daily Duplicates"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 9 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        -1248
+      ],
+      "id": "9f830076-301c-4bf8-b67c-b0c89d95c39a",
+      "name": "Fetch Weekly Analytics2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites2').all();\n\nconst periodStart = $now.minus({ days: 9 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -1248
+      ],
+      "id": "df256968-849e-4f5d-ae17-52cea410ad41",
+      "name": "Clean Weekly KPIs2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1344,
+        -1120
+      ],
+      "id": "5a66c09e-faf6-4d65-a223-b57a1ecc1b0c",
+      "name": "Merge Weekly Accounts2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\nconst unique = new Map();\n\nfor (const item of items) {\n\n  const key =\n    item.recordKey ||\n    `${item.periodStart || ''}|${item.periodEnd || ''}|${item.domain || ''}`;\n\n  if (!key) continue;\n\n  const existing = unique.get(key);\n\n  // First occurrence\n  if (!existing) {\n    unique.set(key, item);\n    continue;\n  }\n\n  // If the same website exists in both Search Console accounts,\n  // keep the record with stronger/more complete search data.\n  const existingImpressions = Number(existing.impressions || 0);\n  const currentImpressions = Number(item.impressions || 0);\n\n  const existingClicks = Number(existing.clicks || 0);\n  const currentClicks = Number(item.clicks || 0);\n\n  if (\n    currentImpressions > existingImpressions ||\n    (\n      currentImpressions === existingImpressions &&\n      currentClicks > existingClicks\n    )\n  ) {\n    unique.set(key, item);\n  }\n}\n\nreturn Array.from(unique.values()).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1584,
+        -1184
+      ],
+      "id": "99fa04ff-5f71-43b5-b919-89e474249323",
+      "name": "Remove Weekly Duplicates2"
+    },
+    {
+      "parameters": {
+        "url": "=https://www.googleapis.com/webmasters/v3/sites",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "id": "5cf0ed31-d762-44a8-a2a4-ac5616d95afa",
+      "name": "List Search Console Sites3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -864,
+        -2624
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const sites = $input.first().json.siteEntry || [];\n\nreturn sites\n  .filter(site => site.permissionLevel !== 'siteUnverifiedUser')\n  .map(site => ({\n    json: {\n      siteUrl: site.siteUrl,\n      permissionLevel: site.permissionLevel\n    }\n  }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -336,
+        -2656
+      ],
+      "id": "0724fb55-651d-47b1-80e5-f1ace53819f0",
+      "name": "Split Search Console Sites3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\"\n  ],\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -32,
+        -2672
+      ],
+      "id": "29b8f394-56c6-41d2-b45f-00f0493eedf0",
+      "name": "Fetch Search Analytics3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites3').all();\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const date =\n    row?.keys?.[0] ||\n    $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  return {\n    json: {\n      date: date,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n\n      recordKey: `${date}|${domain}`\n    }\n  };\n\n});"
+      },
+      "id": "5ec8993c-129d-49d6-bf9d-13f26105137f",
+      "name": "Clean Daily KPIs3",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        368,
+        -2672
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 9 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -48,
+        -3040
+      ],
+      "id": "7713a194-eef6-41de-9f72-423cb4c52106",
+      "name": "Fetch Weekly Analytics3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites3').all();\n\nconst periodStart = $now.minus({ days: 9 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -3040
+      ],
+      "id": "3d518646-6d06-414c-967d-3429752e58f1",
+      "name": "Clean Weekly KPIs3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 30 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        576,
+        -1584
+      ],
+      "id": "24b68183-94be-49f1-9cb2-14b559e1092b",
+      "name": "Fetch Monthly Analytics2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"page\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        -1936
+      ],
+      "id": "db2416fc-e66f-47a0-b911-779fcef4e536",
+      "name": "Fetch Page Performance2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"query\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        560,
+        -2208
+      ],
+      "id": "88a5d572-68ee-482a-8c01-f1daaa9090b3",
+      "name": "Fetch Query Performance2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites2').all();\n\nconst periodStart = $now.minus({ days: 30 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        816,
+        -1584
+      ],
+      "id": "9c7b298e-74de-45e8-b525-9cecf1c0ed82",
+      "name": "Clean Monthly KPIs2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites2').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const pageUrl = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    let pagePath = '/';\n\n    try {\n      pagePath = new URL(pageUrl).pathname || '/';\n    } catch (error) {\n      pagePath = pageUrl\n        .replace(/^https?:\\/\\/[^/]+/i, '') || '/';\n    }\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(pageUrl)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        pageUrl: pageUrl,\n        pagePath: pagePath,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition:\n          impressions > 0\n            ? Number(positionRaw.toFixed(2))\n            : null,\n        dataStatus:\n          impressions > 0\n            ? 'Has Data'\n            : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -1936
+      ],
+      "id": "1a7ab715-d71b-4914-9130-f936d3f6e116",
+      "name": "Clean Page Performance2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites2').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const query = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(query)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        permissionLevel: site.permissionLevel || '',\n        query: query,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition:\n          impressions > 0\n            ? Number(positionRaw.toFixed(2))\n            : null,\n        dataStatus:\n          impressions > 0\n            ? 'Has Data'\n            : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        800,
+        -2208
+      ],
+      "id": "de0ead03-b365-4236-8739-afd8ec39526d",
+      "name": "Clean Query Performance2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1312,
+        -1584
+      ],
+      "id": "b981d5f1-8fea-4a7c-be05-9feb957ff259",
+      "name": "Merge Monthly Accounts2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1312,
+        -2032
+      ],
+      "id": "bccf8242-b980-4063-b1a4-277b47b41f8a",
+      "name": "Merge Page Performance Accounts2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1280,
+        -2432
+      ],
+      "id": "5b499614-22df-4be1-99b6-10cc1239ac5e",
+      "name": "Merge Query Accounts2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\nconst unique = new Map();\n\nfor (const item of items) {\n\n  const key =\n    item.recordKey ||\n    `${item.periodStart || ''}|${item.periodEnd || ''}|${item.domain || ''}`;\n\n  if (!key) continue;\n\n  const existing = unique.get(key);\n\n  if (!existing) {\n    unique.set(key, item);\n    continue;\n  }\n\n  const existingImpressions = Number(existing.impressions || 0);\n  const currentImpressions = Number(item.impressions || 0);\n\n  const existingClicks = Number(existing.clicks || 0);\n  const currentClicks = Number(item.clicks || 0);\n\n  if (\n    currentImpressions > existingImpressions ||\n    (\n      currentImpressions === existingImpressions &&\n      currentClicks > existingClicks\n    )\n  ) {\n    unique.set(key, item);\n  }\n}\n\nreturn Array.from(unique.values()).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1552,
+        -1584
+      ],
+      "id": "194c17be-3a5a-4910-9b2f-a2f51a1cc6e1",
+      "name": "Remove Monthly Duplicates2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\nconst unique = new Map();\n\nfor (const item of items) {\n\n  const key =\n    item.recordKey ||\n    `${item.date || ''}|${item.domain || ''}|${encodeURIComponent(item.pageUrl || '')}`;\n\n  if (!key) continue;\n\n  const existing = unique.get(key);\n\n  if (!existing) {\n    unique.set(key, item);\n    continue;\n  }\n\n  const existingImpressions = Number(existing.impressions || 0);\n  const currentImpressions = Number(item.impressions || 0);\n\n  const existingClicks = Number(existing.clicks || 0);\n  const currentClicks = Number(item.clicks || 0);\n\n  // If the same page exists in both Google accounts,\n  // keep the stronger result.\n  if (\n    currentImpressions > existingImpressions ||\n    (\n      currentImpressions === existingImpressions &&\n      currentClicks > existingClicks\n    )\n  ) {\n    unique.set(key, item);\n  }\n}\n\nreturn Array.from(unique.values()).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1568,
+        -2032
+      ],
+      "id": "2c7e615e-49c9-4e2b-b0f5-d59f169e0ae8",
+      "name": "Remove Page Performance Duplicates2"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\nconst unique = new Map();\n\nfor (const item of items) {\n\n  const key =\n    item.recordKey ||\n    `${item.date || ''}|${item.domain || ''}|${encodeURIComponent(item.query || '')}`;\n\n  if (!key) continue;\n\n  const existing = unique.get(key);\n\n  if (!existing) {\n    unique.set(key, item);\n    continue;\n  }\n\n  const existingImpressions = Number(existing.impressions || 0);\n  const currentImpressions = Number(item.impressions || 0);\n\n  const existingClicks = Number(existing.clicks || 0);\n  const currentClicks = Number(item.clicks || 0);\n\n  // Same query/domain/date exists in both accounts:\n  // keep the record with stronger data.\n  if (\n    currentImpressions > existingImpressions ||\n    (\n      currentImpressions === existingImpressions &&\n      currentClicks > existingClicks\n    )\n  ) {\n    unique.set(key, item);\n  }\n}\n\nreturn Array.from(unique.values()).map(item => ({\n  json: item\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1536,
+        -2432
+      ],
+      "id": "4adc4b65-45c5-403a-a7a4-494fb9ba1e1e",
+      "name": "Remove Query Duplicates2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query\n",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 30 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"rowLimit\": 1\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -64,
+        -3328
+      ],
+      "id": "432c11dc-02af-4493-95c0-3a74912b1a23",
+      "name": "Fetch Monthly Analytics3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites3').all();\n\nconst periodStart = $now.minus({ days: 30 }).toFormat('yyyy-MM-dd');\nconst periodEnd = $now.minus({ days: 3 }).toFormat('yyyy-MM-dd');\n\nreturn responses.map((item, index) => {\n\n  const response = item.json || {};\n  const site = sites[index]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const clicks = Number(row?.clicks ?? 0);\n  const impressions = Number(row?.impressions ?? 0);\n  const ctrRaw = Number(row?.ctr ?? 0);\n  const positionRaw = Number(row?.position ?? 0);\n\n  const recordKey = `${periodStart}|${periodEnd}|${domain}`;\n\n  return {\n    json: {\n      periodStart: periodStart,\n      periodEnd: periodEnd,\n      website: siteUrl,\n      domain: domain,\n      permissionLevel: site.permissionLevel || '',\n      clicks: clicks,\n      impressions: impressions,\n      ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n      averagePosition:\n        impressions > 0\n          ? Number(positionRaw.toFixed(2))\n          : null,\n      dataStatus:\n        impressions > 0\n          ? 'Has Data'\n          : 'No Search Data',\n      recordKey: recordKey\n    }\n  };\n\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        -3328
+      ],
+      "id": "83bf33e2-9089-4a8f-a3d9-28f443487470",
+      "name": "Clean Monthly KPIs3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"page\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -64,
+        -3600
+      ],
+      "id": "befa5720-31db-4abc-8b0a-b2dbbd9ef931",
+      "name": "Fetch Page Performance3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites3').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const pageUrl = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    let pagePath = '/';\n\n    try {\n      pagePath = new URL(pageUrl).pathname || '/';\n    } catch (error) {\n      pagePath = pageUrl\n        .replace(/^https?:\\/\\/[^/]+/i, '') || '/';\n    }\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(pageUrl)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        pageUrl: pageUrl,\n        pagePath: pagePath,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition:\n          impressions > 0\n            ? Number(positionRaw.toFixed(2))\n            : null,\n        dataStatus:\n          impressions > 0\n            ? 'Has Data'\n            : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        304,
+        -3600
+      ],
+      "id": "319fffdf-4678-4647-b61c-746f6f40bf62",
+      "name": "Clean Page Performance3"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.siteUrl) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"startDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"endDate\": \"{{ $now.minus({ days: 3 }).toFormat('yyyy-MM-dd') }}\",\n  \"dimensions\": [\n    \"date\",\n    \"query\"\n  ],\n  \"rowLimit\": 25000,\n  \"startRow\": 0\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -64,
+        -3808
+      ],
+      "id": "a5eb7635-9240-46cd-9c52-1f9718b90b28",
+      "name": "Fetch Query Performance3"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sites = $('Split Search Console Sites3').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const site = sites[i]?.json || {};\n\n  const siteUrl = site.siteUrl || '';\n\n  const domain = siteUrl\n    .replace('sc-domain:', '')\n    .replace(/^https?:\\/\\//, '')\n    .replace(/\\/$/, '');\n\n  const rows = Array.isArray(response.rows)\n    ? response.rows\n    : [];\n\n  for (const row of rows) {\n\n    const date = row?.keys?.[0] || '';\n    const query = row?.keys?.[1] || '';\n\n    const clicks = Number(row?.clicks ?? 0);\n    const impressions = Number(row?.impressions ?? 0);\n    const ctrRaw = Number(row?.ctr ?? 0);\n    const positionRaw = Number(row?.position ?? 0);\n\n    const recordKey =\n      `${date}|${domain}|${encodeURIComponent(query)}`;\n\n    output.push({\n      json: {\n        date: date,\n        website: siteUrl,\n        domain: domain,\n        permissionLevel: site.permissionLevel || '',\n        query: query,\n        clicks: clicks,\n        impressions: impressions,\n        ctrPercent: Number((ctrRaw * 100).toFixed(2)),\n        averagePosition:\n          impressions > 0\n            ? Number(positionRaw.toFixed(2))\n            : null,\n        dataStatus:\n          impressions > 0\n            ? 'Has Data'\n            : 'No Search Data',\n        recordKey: recordKey\n      }\n    });\n\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        288,
+        -3808
+      ],
+      "id": "acac6da4-bfca-43ed-b056-daa47e545f0c",
+      "name": "Clean Query Performance3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1360,
+        -784
+      ],
+      "id": "2c09debb-16a4-406d-a1c8-9462be06e63c",
+      "name": "Merge1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1328,
+        -1360
+      ],
+      "id": "5d40a6d0-8e63-4c04-868a-f65008353e4f",
+      "name": "Merge2"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1424,
+        -1776
+      ],
+      "id": "fa741293-b348-4b7f-89b3-0658cf6af41c",
+      "name": "Merge3"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1312,
+        -2224
+      ],
+      "id": "50cda5ee-639a-4ed4-93d2-26478bad23c7",
+      "name": "Merge4"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        1264,
+        -2624
+      ],
+      "id": "63a9c547-56b1-4968-9861-4aeaeaf45046",
+      "name": "Merge5"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/webmasters/v3/sites",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -3552,
+        -1968
+      ],
+      "id": "b8eb3a76-9ebf-4484-8419-0a6223841e66",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://analyticsdata.googleapis.com/v1beta/properties/REPLACE_WITH_GA4_PROPERTY_1:runReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"dateRanges\": [\n    {\n      \"startDate\": \"yesterday\",\n      \"endDate\": \"yesterday\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"name\": \"screenPageViews\"\n    },\n    {\n      \"name\": \"activeUsers\"\n    },\n    {\n      \"name\": \"sessions\"\n    },\n    {\n      \"name\": \"newUsers\"\n    },\n    {\n      \"name\": \"engagedSessions\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -3808,
+        -1216
+      ],
+      "id": "a2c7c2c1-0288-467e-9dd7-919fead644be",
+      "name": "Fetch GA4 Daily Traffic"
+    },
+    {
+      "parameters": {
+        "jsCode": "const response = $input.first().json || {};\n\n// Get metric headers and values\nconst headers = Array.isArray(response.metricHeaders)\n  ? response.metricHeaders\n  : [];\n\nconst row =\n  Array.isArray(response.rows) && response.rows.length > 0\n    ? response.rows[0]\n    : {};\n\nconst values = Array.isArray(row.metricValues)\n  ? row.metricValues\n  : [];\n\n// Build metrics dynamically by metric name\nconst metrics = {};\n\nheaders.forEach((header, index) => {\n  const metricName = header?.name || '';\n  const metricValue = Number(values[index]?.value || 0);\n\n  if (metricName) {\n    metrics[metricName] = metricValue;\n  }\n});\n\n// Yesterday = reporting date\nconst date = $now\n  .minus({ days: 1 })\n  .toFormat('yyyy-MM-dd');\n\nconst views = Number(metrics.screenPageViews || 0);\nconst visitors = Number(metrics.activeUsers || 0);\nconst sessions = Number(metrics.sessions || 0);\nconst newUsers = Number(metrics.newUsers || 0);\nconst engagedSessions = Number(metrics.engagedSessions || 0);\n\nreturn [\n  {\n    json: {\n      date: date,\n\n      propertyId: 'REPLACE_WITH_GA4_PROPERTY_1',\n\n      website:\n        'https://site-one.example.com/',\n\n      domain:\n        'site-one.example.com',\n\n      views: views,\n\n      visitors: visitors,\n\n      sessions: sessions,\n\n      newUsers: newUsers,\n\n      engagedSessions: engagedSessions,\n\n      dataStatus:\n        views > 0 || visitors > 0 || sessions > 0\n          ? 'Has Data'\n          : 'No Analytics Data',\n\n      recordKey:\n        `${date}|REPLACE_WITH_GA4_PROPERTY_1`\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -3584,
+        -1216
+      ],
+      "id": "83bc43c3-3587-426b-a931-a209d545f2f1",
+      "name": "Clean GA4 Daily Traffic"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_6",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recordKey": "={{ $json.recordKey }}",
+            "date": "={{ $json.date }}",
+            "propertyId": "={{ $json.propertyId }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "views": "={{ $json.views }}",
+            "visitors": "={{ $json.visitors }}",
+            "sessions": "={{ $json.sessions }}",
+            "newUsers": "={{ $json.newUsers }}",
+            "engagedSessions": "={{ $json.engagedSessions }}",
+            "dataStatus": "={{ $json.dataStatus }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "date",
+              "displayName": "date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propertyId",
+              "displayName": "propertyId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "views",
+              "displayName": "views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "visitors",
+              "displayName": "visitors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessions",
+              "displayName": "sessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "newUsers",
+              "displayName": "newUsers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "engagedSessions",
+              "displayName": "engagedSessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "2a300399-7e8e-4fb7-8010-5dd4c6bdfd3b",
+      "name": "GA4 Daily Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -4128
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_7",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "recordKey": "={{ $json.recordKey }}",
+            "periodStart": "={{ $json.periodStart }}",
+            "periodEnd": "={{ $json.periodEnd }}",
+            "propertyId": "={{ $json.propertyId }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "views": "={{ $json.views }}",
+            "visitors": "={{ $json.visitors }}",
+            "sessions": "={{ $json.sessions }}",
+            "newUsers": "={{ $json.newUsers }}",
+            "engagedSessions": "={{ $json.engagedSessions }}",
+            "dataStatus": "={{ $json.dataStatus }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "periodStart",
+              "displayName": "periodStart",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "periodEnd",
+              "displayName": "periodEnd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propertyId",
+              "displayName": "propertyId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "views",
+              "displayName": "views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "visitors",
+              "displayName": "visitors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessions",
+              "displayName": "sessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "newUsers",
+              "displayName": "newUsers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "engagedSessions",
+              "displayName": "engagedSessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "c9ea5c93-4246-4d32-b853-373549f336c1",
+      "name": "GA4 Weekly Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -4496
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_8",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "periodStart": "={{ $json.periodStart }}",
+            "periodEnd": "={{ $json.periodEnd }}",
+            "propertyId": "={{ $json.propertyId }}",
+            "website": "={{ $json.website }}",
+            "domain": "={{ $json.domain }}",
+            "views": "={{ $json.views }}",
+            "visitors": "={{ $json.visitors }}",
+            "sessions": "={{ $json.sessions }}",
+            "newUsers": "={{ $json.newUsers }}",
+            "engagedSessions": "={{ $json.engagedSessions }}",
+            "dataStatus": "={{ $json.dataStatus }}",
+            "recordKey": "={{ $json.recordKey }}"
+          },
+          "matchingColumns": [
+            "recordKey"
+          ],
+          "schema": [
+            {
+              "id": "periodStart",
+              "displayName": "periodStart",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "periodEnd",
+              "displayName": "periodEnd",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "propertyId",
+              "displayName": "propertyId",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "website",
+              "displayName": "website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "domain",
+              "displayName": "domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "views",
+              "displayName": "views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "visitors",
+              "displayName": "visitors",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "sessions",
+              "displayName": "sessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "newUsers",
+              "displayName": "newUsers",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "engagedSessions",
+              "displayName": "engagedSessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "dataStatus",
+              "displayName": "dataStatus",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "recordKey",
+              "displayName": "recordKey",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "4bae8c29-e7cd-4d41-bab9-cdf4ab979218",
+      "name": "GA4 Monthly Summary",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        528,
+        -4864
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -3216,
+        -1952
+      ],
+      "id": "1e853dcd-e420-4601-a3d3-922fec51f92e",
+      "name": "List GA4 Properties"
+    },
+    {
+      "parameters": {
+        "jsCode": "const input = $input.first().json || {};\n\nconst accountSummaries = Array.isArray(input.accountSummaries)\n  ? input.accountSummaries\n  : [];\n\nconst output = [];\nconst seen = new Set();\n\nfor (const account of accountSummaries) {\n\n  const properties = Array.isArray(account.propertySummaries)\n    ? account.propertySummaries\n    : [];\n\n  for (const property of properties) {\n\n    const propertyResource = property.property || '';\n\n    if (!propertyResource || seen.has(propertyResource)) {\n      continue;\n    }\n\n    seen.add(propertyResource);\n\n    const propertyId = propertyResource.replace('properties/', '');\n\n    const accountResource = account.account || '';\n    const accountId = accountResource.replace('accounts/', '');\n\n    output.push({\n      json: {\n        accountId,\n        accountResource,\n        accountName: account.displayName || '',\n\n        propertyId,\n        propertyResource,\n        propertyName: property.displayName || '',\n\n        propertyType: property.propertyType || '',\n        canEdit: Boolean(property.canEdit)\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1056,
+        -4128
+      ],
+      "id": "c72b929e-6cb8-45e2-96e2-f6ee56329f41",
+      "name": "Split GA4 Properties"
+    },
+    {
+      "parameters": {
+        "url": "=https://analyticsadmin.googleapis.com/v1beta/properties/{{ $json.propertyId }}/dataStreams",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -864,
+        -4128
+      ],
+      "id": "c2beb127-c097-4e2b-a459-682caa43265e",
+      "name": "List GA4 Data Streams"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst properties = $('Split GA4 Properties').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const property = properties[i]?.json || {};\n\n  const streams = Array.isArray(response.dataStreams)\n    ? response.dataStreams\n    : [];\n\n  for (const stream of streams) {\n\n    // We only want website streams\n    if (stream.type !== 'WEB_DATA_STREAM') {\n      continue;\n    }\n\n    const website =\n      stream.webStreamData?.defaultUri || '';\n\n    const measurementId =\n      stream.webStreamData?.measurementId || '';\n\n    let domain = '';\n\n    try {\n      domain = new URL(website)\n        .hostname\n        .replace(/^www\\./i, '')\n        .toLowerCase();\n    } catch (error) {\n      domain = website\n        .replace(/^https?:\\/\\//i, '')\n        .replace(/^www\\./i, '')\n        .replace(/\\/.*$/, '')\n        .toLowerCase();\n    }\n\n    const streamResource = stream.name || '';\n\n    const streamId =\n      streamResource.split('/').pop() || '';\n\n    output.push({\n      json: {\n        accountId: property.accountId || '',\n        accountName: property.accountName || '',\n\n        propertyId: property.propertyId || '',\n        propertyResource:\n          property.propertyResource || '',\n\n        propertyName:\n          property.propertyName || '',\n\n        streamId,\n        streamResource,\n\n        streamName:\n          stream.displayName || '',\n\n        measurementId,\n\n        website,\n\n        domain,\n\n        dataStreamType:\n          stream.type || '',\n\n        recordKey:\n          `${property.propertyId || ''}|${streamId}`\n      }\n    });\n  }\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -624,
+        -4128
+      ],
+      "id": "973a0591-6bdd-4d40-a615-9b3d6e88f03f",
+      "name": "Clean GA4 Properties & Streams"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $json.propertyId }}:runReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"dateRanges\": [\n    {\n      \"startDate\": \"yesterday\",\n      \"endDate\": \"yesterday\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"name\": \"screenPageViews\"\n    },\n    {\n      \"name\": \"activeUsers\"\n    },\n    {\n      \"name\": \"sessions\"\n    },\n    {\n      \"name\": \"newUsers\"\n    },\n    {\n      \"name\": \"engagedSessions\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -48,
+        -4128
+      ],
+      "id": "bb0b7601-1332-4a2f-8b2f-0e5df92a0425",
+      "name": "Fetch GA4 Daily All Properties"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sources = $('Select Preferred GA4 Properties').all();\n\nconst date = $now\n  .minus({ days: 1 })\n  .toFormat('yyyy-MM-dd');\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const source = sources[i]?.json || {};\n\n  const headers = Array.isArray(response.metricHeaders)\n    ? response.metricHeaders\n    : [];\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : {};\n\n  const values = Array.isArray(row.metricValues)\n    ? row.metricValues\n    : [];\n\n  const metrics = {};\n\n  headers.forEach((header, index) => {\n    const name = header?.name || '';\n    const value = Number(values[index]?.value || 0);\n\n    if (name) {\n      metrics[name] = value;\n    }\n  });\n\n  const views = Number(metrics.screenPageViews || 0);\n  const visitors = Number(metrics.activeUsers || 0);\n  const sessions = Number(metrics.sessions || 0);\n  const newUsers = Number(metrics.newUsers || 0);\n  const engagedSessions =\n    Number(metrics.engagedSessions || 0);\n\n  const domain = String(source.domain || '')\n    .toLowerCase()\n    .replace(/^www\\./, '');\n\n  output.push({\n    json: {\n      date,\n\n      accountId: source.accountId || '',\n      accountName: source.accountName || '',\n\n      propertyId: source.propertyId || '',\n      propertyName: source.propertyName || '',\n\n      streamId: source.streamId || '',\n      measurementId: source.measurementId || '',\n\n      website: source.website || '',\n      domain,\n\n      views,\n      visitors,\n      sessions,\n      newUsers,\n      engagedSessions,\n\n      duplicatePropertyCount:\n        Number(source.duplicatePropertyCount || 1),\n\n      propertySelection:\n        source.propertySelection || '',\n\n      dataStatus:\n        views > 0 || visitors > 0 || sessions > 0\n          ? 'Has Data'\n          : 'No Analytics Data',\n\n      recordKey:\n        `${date}|${domain}`\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -4128
+      ],
+      "id": "52680947-8689-4038-8377-9b62762b013f",
+      "name": "Clean GA4 Daily All Properties"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $json.propertyId }}:runReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"dateRanges\": [\n    {\n      \"startDate\": \"7daysAgo\",\n      \"endDate\": \"yesterday\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"name\": \"screenPageViews\"\n    },\n    {\n      \"name\": \"activeUsers\"\n    },\n    {\n      \"name\": \"sessions\"\n    },\n    {\n      \"name\": \"newUsers\"\n    },\n    {\n      \"name\": \"engagedSessions\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -48,
+        -4496
+      ],
+      "id": "18b03423-91d3-4031-a4fb-4daa761b66d5",
+      "name": "Fetch GA4 Weekly All Properties"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sources = $('Select Preferred GA4 Properties').all();\n\nconst periodStart = $now\n  .minus({ days: 7 })\n  .toFormat('yyyy-MM-dd');\n\nconst periodEnd = $now\n  .minus({ days: 1 })\n  .toFormat('yyyy-MM-dd');\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const source = sources[i]?.json || {};\n\n  const headers = Array.isArray(response.metricHeaders)\n    ? response.metricHeaders\n    : [];\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : {};\n\n  const values = Array.isArray(row.metricValues)\n    ? row.metricValues\n    : [];\n\n  const metrics = {};\n\n  headers.forEach((header, index) => {\n    const name = header?.name || '';\n    const value = Number(values[index]?.value || 0);\n\n    if (name) {\n      metrics[name] = value;\n    }\n  });\n\n  const views = Number(metrics.screenPageViews || 0);\n  const visitors = Number(metrics.activeUsers || 0);\n  const sessions = Number(metrics.sessions || 0);\n  const newUsers = Number(metrics.newUsers || 0);\n  const engagedSessions =\n    Number(metrics.engagedSessions || 0);\n\n  const domain = String(source.domain || '')\n    .toLowerCase()\n    .replace(/^www\\./, '');\n\n  output.push({\n    json: {\n      periodStart,\n      periodEnd,\n\n      accountId: source.accountId || '',\n      accountName: source.accountName || '',\n\n      propertyId: source.propertyId || '',\n      propertyName: source.propertyName || '',\n\n      streamId: source.streamId || '',\n      measurementId: source.measurementId || '',\n\n      website: source.website || '',\n      domain,\n\n      views,\n      visitors,\n      sessions,\n      newUsers,\n      engagedSessions,\n\n      duplicatePropertyCount:\n        Number(source.duplicatePropertyCount || 1),\n\n      propertySelection:\n        source.propertySelection || '',\n\n      dataStatus:\n        views > 0 || visitors > 0 || sessions > 0\n          ? 'Has Data'\n          : 'No Analytics Data',\n\n      recordKey:\n        `${periodStart}|${periodEnd}|${domain}`\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        208,
+        -4496
+      ],
+      "id": "ca2f21cf-de6f-45f8-b7be-6d2056479ed6",
+      "name": "Clean GA4 Weekly All Properties"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $json.propertyId }}:runReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"dateRanges\": [\n    {\n      \"startDate\": \"28daysAgo\",\n      \"endDate\": \"yesterday\"\n    }\n  ],\n  \"metrics\": [\n    {\n      \"name\": \"screenPageViews\"\n    },\n    {\n      \"name\": \"activeUsers\"\n    },\n    {\n      \"name\": \"sessions\"\n    },\n    {\n      \"name\": \"newUsers\"\n    },\n    {\n      \"name\": \"engagedSessions\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -64,
+        -4864
+      ],
+      "id": "22fa02f4-2329-497f-be43-6eae73981f95",
+      "name": "Fetch GA4 Monthly All Properties"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst sources = $('Select Preferred GA4 Properties').all();\n\nconst periodStart = $now\n  .minus({ days: 28 })\n  .toFormat('yyyy-MM-dd');\n\nconst periodEnd = $now\n  .minus({ days: 1 })\n  .toFormat('yyyy-MM-dd');\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const source = sources[i]?.json || {};\n\n  const headers = Array.isArray(response.metricHeaders)\n    ? response.metricHeaders\n    : [];\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : {};\n\n  const values = Array.isArray(row.metricValues)\n    ? row.metricValues\n    : [];\n\n  const metrics = {};\n\n  headers.forEach((header, index) => {\n    const name = header?.name || '';\n    const value = Number(values[index]?.value || 0);\n\n    if (name) {\n      metrics[name] = value;\n    }\n  });\n\n  const views = Number(metrics.screenPageViews || 0);\n  const visitors = Number(metrics.activeUsers || 0);\n  const sessions = Number(metrics.sessions || 0);\n  const newUsers = Number(metrics.newUsers || 0);\n  const engagedSessions =\n    Number(metrics.engagedSessions || 0);\n\n  const domain = String(source.domain || '')\n    .toLowerCase()\n    .replace(/^www\\./, '');\n\n  output.push({\n    json: {\n      periodStart,\n      periodEnd,\n\n      accountId: source.accountId || '',\n      accountName: source.accountName || '',\n\n      propertyId: source.propertyId || '',\n      propertyName: source.propertyName || '',\n\n      streamId: source.streamId || '',\n      measurementId: source.measurementId || '',\n\n      website: source.website || '',\n      domain,\n\n      views,\n      visitors,\n      sessions,\n      newUsers,\n      engagedSessions,\n\n      duplicatePropertyCount:\n        Number(source.duplicatePropertyCount || 1),\n\n      propertySelection:\n        source.propertySelection || '',\n\n      dataStatus:\n        views > 0 || visitors > 0 || sessions > 0\n          ? 'Has Data'\n          : 'No Analytics Data',\n\n      recordKey:\n        `${periodStart}|${periodEnd}|${domain}`\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        176,
+        -4864
+      ],
+      "id": "a4577f61-70e3-4d0a-a433-0b186dab88d7",
+      "name": "Clean GA4 Monthly All Properties"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\n// Preferred GA4 properties for domains that have duplicates.\nconst preferredProperties = {\n  'site-one.example.com': 'REPLACE_WITH_GA4_PROPERTY_1',\n  'site-two.example.com': 'REPLACE_WITH_GA4_PROPERTY_2',\n  'site-three.example.com': 'REPLACE_WITH_GA4_PROPERTY_3'\n};\n\nconst grouped = new Map();\n\nfor (const item of items) {\n\n  const domain = String(item.domain || '')\n    .toLowerCase()\n    .replace(/^www\\./, '');\n\n  if (!domain) continue;\n\n  if (!grouped.has(domain)) {\n    grouped.set(domain, []);\n  }\n\n  grouped.get(domain).push(item);\n}\n\nconst output = [];\n\nfor (const [domain, properties] of grouped.entries()) {\n\n  const preferredId = preferredProperties[domain];\n\n  let selected = null;\n  let propertySelection = '';\n\n  // Use manually preferred property when it exists.\n  if (preferredId) {\n    selected = properties.find(\n      p => String(p.propertyId) === String(preferredId)\n    );\n\n    if (selected) {\n      propertySelection = 'Preferred Property';\n    }\n  }\n\n  // If only one property exists, use it automatically.\n  if (!selected && properties.length === 1) {\n    selected = properties[0];\n    propertySelection = 'Single Property';\n  }\n\n  // Multiple properties but preferred property unavailable.\n  if (!selected) {\n    selected = [...properties].sort((a, b) =>\n      String(a.propertyId).localeCompare(\n        String(b.propertyId),\n        undefined,\n        { numeric: true }\n      )\n    )[0];\n\n    propertySelection = 'Automatic Fallback';\n  }\n\n  output.push({\n    json: {\n      ...selected,\n      duplicatePropertyCount: properties.length,\n      propertySelection\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -368,
+        -4128
+      ],
+      "id": "2115b4d3-ca64-4b5c-b9eb-f0e6a81fadbd",
+      "name": "Select Preferred GA4 Properties"
+    },
+    {
+      "parameters": {
+        "url": "https://analyticsadmin.googleapis.com/v1beta/accountSummaries",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -1328,
+        -4128
+      ],
+      "id": "3c848699-a376-4c55-8040-bac99d343548",
+      "name": "List GA4 Properties1"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\n// ----------------------------------------------------\n// BASIC DATES\n// ----------------------------------------------------\nconst reportDate = items[0]?.date || '';\n\nconst generatedDate = $now.toFormat('dd/MM/yyyy');\nconst generatedTime = $now.toFormat('hh:mm a');\n\n// ----------------------------------------------------\n// WEBSITE COUNTS\n// ----------------------------------------------------\nconst totalWebsites = items.length;\n\nconst sitesWithData = items.filter(item =>\n  Number(item.views || 0) > 0 ||\n  Number(item.visitors || 0) > 0 ||\n  Number(item.sessions || 0) > 0\n).length;\n\nconst noAnalyticsData = totalWebsites - sitesWithData;\n\n// ----------------------------------------------------\n// TOTAL GA4 METRICS\n// ----------------------------------------------------\nconst totalViews = items.reduce(\n  (sum, item) => sum + Number(item.views || 0),\n  0\n);\n\nconst totalVisitors = items.reduce(\n  (sum, item) => sum + Number(item.visitors || 0),\n  0\n);\n\nconst totalSessions = items.reduce(\n  (sum, item) => sum + Number(item.sessions || 0),\n  0\n);\n\nconst totalNewUsers = items.reduce(\n  (sum, item) => sum + Number(item.newUsers || 0),\n  0\n);\n\nconst totalEngagedSessions = items.reduce(\n  (sum, item) => sum + Number(item.engagedSessions || 0),\n  0\n);\n\n// ----------------------------------------------------\n// TOP WEBSITES BY VIEWS\n// ----------------------------------------------------\nconst topWebsites = [...items]\n  .filter(item =>\n    Number(item.views || 0) > 0 ||\n    Number(item.visitors || 0) > 0 ||\n    Number(item.sessions || 0) > 0\n  )\n  .sort((a, b) => {\n    const viewsDifference =\n      Number(b.views || 0) - Number(a.views || 0);\n\n    if (viewsDifference !== 0) {\n      return viewsDifference;\n    }\n\n    return Number(b.visitors || 0) -\n      Number(a.visitors || 0);\n  })\n  .slice(0, 10);\n\n// ----------------------------------------------------\n// BUILD TOP WEBSITE TEXT\n// ----------------------------------------------------\nlet topWebsitesText = '';\n\nif (topWebsites.length === 0) {\n\n  topWebsitesText =\n    'No websites have Analytics data for this reporting date.';\n\n} else {\n\n  topWebsitesText = topWebsites\n    .map((item, index) => {\n\n      const domain =\n        item.domain ||\n        item.website ||\n        'Unknown Website';\n\n      return (\n        `${index + 1}. *${domain}*\\n` +\n        `   Views: ${Number(item.views || 0).toLocaleString()}\\n` +\n        `   Visitors: ${Number(item.visitors || 0).toLocaleString()}\\n` +\n        `   Sessions: ${Number(item.sessions || 0).toLocaleString()}`\n      );\n    })\n    .join('\\n\\n');\n}\n\n// ----------------------------------------------------\n// WEBSITES WITH NO ANALYTICS DATA\n// ----------------------------------------------------\nconst noDataSites = items.filter(item =>\n  Number(item.views || 0) === 0 &&\n  Number(item.visitors || 0) === 0 &&\n  Number(item.sessions || 0) === 0\n);\n\nlet noDataText = '';\n\nif (noDataSites.length > 0) {\n\n  noDataText = noDataSites\n    .slice(0, 10)\n    .map((item, index) => {\n      const domain =\n        item.domain ||\n        item.website ||\n        'Unknown Website';\n\n      return `${index + 1}. ${domain}`;\n    })\n    .join('\\n');\n\n  if (noDataSites.length > 10) {\n    noDataText +=\n      `\\n…and ${noDataSites.length - 10} more websites`;\n  }\n\n} else {\n\n  noDataText = 'All websites have Analytics data ✅';\n}\n\n// ----------------------------------------------------\n// BUILD SLACK MESSAGE\n// ----------------------------------------------------\nconst message =\n`📊 *GA4 DAILY WEBSITE TRAFFIC REPORT*\n\n📅 *Analytics Data Date:* ${reportDate}\n🕒 *Report Generated:* ${generatedDate} ${generatedTime}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n🌐 *WEBSITE STATUS*\n\n• Total Websites: *${totalWebsites}*\n• Websites With GA4 Data: *${sitesWithData}*\n• No Analytics Data: *${noAnalyticsData}*\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n📈 *TOTAL TRAFFIC*\n\n• Views: *${totalViews.toLocaleString()}*\n• Visitors: *${totalVisitors.toLocaleString()}*\n• Sessions: *${totalSessions.toLocaleString()}*\n• New Users: *${totalNewUsers.toLocaleString()}*\n• Engaged Sessions: *${totalEngagedSessions.toLocaleString()}*\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n🏆 *TOP 10 WEBSITES BY VIEWS*\n\n${topWebsitesText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n⚠️ *WEBSITES WITH NO GA4 DATA*\n\n${noDataText}\n\n━━━━━━━━━━━━━━━━━━━━━━\n\n✅ GA4 traffic monitoring completed successfully.`;\n\n\n// ----------------------------------------------------\n// OUTPUT ONE ITEM FOR SLACK\n// ----------------------------------------------------\nreturn [\n  {\n    json: {\n      reportDate,\n      generatedDate,\n      generatedTime,\n\n      totalWebsites,\n      sitesWithData,\n      noAnalyticsData,\n\n      totalViews,\n      totalVisitors,\n      totalSessions,\n      totalNewUsers,\n      totalEngagedSessions,\n\n      topWebsites,\n      noDataSites,\n\n      message\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        736,
+        -4128
+      ],
+      "id": "32b6047a-2b13-4150-9ffb-03a5cd152f10",
+      "name": "GA4 Build Slack Daily Summary"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        2464,
+        -3664
+      ],
+      "id": "097ce3a4-239a-412c-9a32-c3410c5e064b",
+      "name": "Merge6"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all().map(item => item.json);\n\n// ======================================================\n// 1. IDENTIFY SEARCH CONSOLE + GA4 SUMMARIES\n// ======================================================\n\nconst seo = items.find(x =>\n  x.totalClicks !== undefined &&\n  x.totalImpressions !== undefined\n) || {};\n\nconst ga4 = items.find(x =>\n  x.totalViews !== undefined &&\n  x.totalVisitors !== undefined\n) || {};\n\n\n// ======================================================\n// 2. HELPERS\n// ======================================================\n\nconst num = value => Number(value || 0);\n\nconst fmt = value =>\n  num(value).toLocaleString('en-US');\n\nconst dec = value =>\n  num(value).toFixed(2);\n\nconst normalizeDomain = value =>\n  String(value || '')\n    .trim()\n    .toLowerCase()\n    .replace(/^https?:\\/\\//, '')\n    .replace(/^www\\./, '')\n    .replace(/\\/.*$/, '');\n\nconst shortDomain = (domain, length = 27) => {\n  domain = String(domain || '');\n\n  return domain.length > length\n    ? domain.substring(0, length - 1) + '…'\n    : domain;\n};\n\nconst pad = (value, length, right = false) => {\n  let text = String(value ?? '');\n\n  if (text.length > length) {\n    text = text.substring(0, length);\n  }\n\n  return right\n    ? text.padStart(length)\n    : text.padEnd(length);\n};\n\n\n// ======================================================\n// 3. DATES\n// ======================================================\n\nconst generatedDate =\n  seo.generatedDate ||\n  ga4.generatedDate ||\n  $now.toFormat('dd/MM/yyyy');\n\nconst generatedTime =\n  ga4.generatedTime ||\n  $now.toFormat('hh:mm a');\n\nconst searchDate =\n  seo.reportDate || 'N/A';\n\nconst analyticsDate =\n  ga4.reportDate || 'N/A';\n\n\n// ======================================================\n// 4. SEARCH CONSOLE KPI\n// ======================================================\n\nconst searchWebsites = num(seo.totalWebsites);\nconst searchWithData = num(seo.sitesWithData);\nconst noSearchData = num(seo.noSearchData);\n\nconst totalClicks = num(seo.totalClicks);\nconst totalImpressions = num(seo.totalImpressions);\n\nconst overallCtr = num(seo.overallCtr);\n\nconst averagePosition = num(\n  seo.overallAveragePosition ??\n  seo.weightedPosition\n);\n\nconst searchCoverage =\n  searchWebsites > 0\n    ? (searchWithData / searchWebsites) * 100\n    : 0;\n\n\n// ======================================================\n// 5. GA4 KPI\n// ======================================================\n\nconst ga4Websites = num(ga4.totalWebsites);\nconst ga4WithData = num(ga4.sitesWithData);\nconst noAnalyticsData = num(ga4.noAnalyticsData);\n\nconst totalViews = num(ga4.totalViews);\nconst totalVisitors = num(ga4.totalVisitors);\nconst totalSessions = num(ga4.totalSessions);\nconst totalNewUsers = num(ga4.totalNewUsers);\nconst totalEngagedSessions = num(ga4.totalEngagedSessions);\n\nconst analyticsCoverage =\n  ga4Websites > 0\n    ? (ga4WithData / ga4Websites) * 100\n    : 0;\n\nconst engagementRate =\n  totalSessions > 0\n    ? (totalEngagedSessions / totalSessions) * 100\n    : 0;\n\n\n// ======================================================\n// 6. EXTRACT SEARCH TOP WEBSITES\n// ======================================================\n\nlet searchWebsitesData = [];\n\nif (Array.isArray(seo.topWebsites)) {\n\n  searchWebsitesData = seo.topWebsites.map(x => ({\n    domain: normalizeDomain(\n      x.domain ||\n      x.website ||\n      x.site\n    ),\n\n    clicks: num(x.clicks),\n\n    impressions: num(x.impressions),\n\n    ctr: num(\n      x.ctr ??\n      x.ctrPercent\n    ),\n\n    position: num(\n      x.averagePosition ??\n      x.position\n    )\n  }));\n\n} else {\n\n  const seoText = String(\n    seo.slackMessage ||\n    seo.message ||\n    ''\n  );\n\n  const lines = seoText.split('\\n');\n\n  for (const line of lines) {\n\n    const match = line.match(\n      /^\\s*\\d+\\.\\s+(.+?)\\s+[—-]\\s+([\\d,]+)\\s+clicks?,\\s+([\\d,]+)\\s+impressions?,\\s+([\\d.]+)%\\s+CTR,\\s+Pos\\.\\s+([\\d.]+)/i\n    );\n\n    if (!match) continue;\n\n    searchWebsitesData.push({\n      domain: normalizeDomain(match[1]),\n      clicks: num(match[2].replace(/,/g, '')),\n      impressions: num(match[3].replace(/,/g, '')),\n      ctr: num(match[4]),\n      position: num(match[5])\n    });\n  }\n}\n\n\n// Remove duplicates\nconst searchMap = new Map();\n\nfor (const item of searchWebsitesData) {\n\n  if (!item.domain) continue;\n\n  if (!searchMap.has(item.domain)) {\n    searchMap.set(item.domain, item);\n  }\n}\n\nsearchWebsitesData = [...searchMap.values()];\n\n\n// ======================================================\n// 7. EXTRACT GA4 TOP WEBSITES\n// ======================================================\n\nlet trafficWebsitesData = [];\n\nif (Array.isArray(ga4.topWebsites)) {\n\n  trafficWebsitesData = ga4.topWebsites.map(x => ({\n    domain: normalizeDomain(\n      x.domain ||\n      x.website\n    ),\n\n    views: num(x.views),\n    visitors: num(x.visitors),\n    sessions: num(x.sessions),\n    newUsers: num(x.newUsers)\n  }));\n\n} else {\n\n  const ga4Text = String(\n    ga4.slackMessage ||\n    ga4.message ||\n    ''\n  );\n\n  const lines = ga4Text\n    .split('\\n')\n    .map(x => x.trim());\n\n  for (let i = 0; i < lines.length; i++) {\n\n    const siteMatch = lines[i].match(\n      /^\\d+\\.\\s+(.+)$/i\n    );\n\n    if (!siteMatch) continue;\n\n    const possibleDomain =\n      normalizeDomain(siteMatch[1]);\n\n    if (!possibleDomain.includes('.')) {\n      continue;\n    }\n\n    let views = 0;\n    let visitors = 0;\n    let sessions = 0;\n\n    for (\n      let j = i + 1;\n      j <= Math.min(i + 4, lines.length - 1);\n      j++\n    ) {\n\n      const viewMatch =\n        lines[j].match(/^Views:\\s*([\\d,]+)/i);\n\n      const visitorMatch =\n        lines[j].match(/^Visitors:\\s*([\\d,]+)/i);\n\n      const sessionMatch =\n        lines[j].match(/^Sessions:\\s*([\\d,]+)/i);\n\n      if (viewMatch) {\n        views = num(\n          viewMatch[1].replace(/,/g, '')\n        );\n      }\n\n      if (visitorMatch) {\n        visitors = num(\n          visitorMatch[1].replace(/,/g, '')\n        );\n      }\n\n      if (sessionMatch) {\n        sessions = num(\n          sessionMatch[1].replace(/,/g, '')\n        );\n      }\n    }\n\n    if (\n      views > 0 ||\n      visitors > 0 ||\n      sessions > 0\n    ) {\n\n      trafficWebsitesData.push({\n        domain: possibleDomain,\n        views,\n        visitors,\n        sessions,\n        newUsers: 0\n      });\n    }\n  }\n}\n\n\n// Remove duplicate GA4 domains\nconst trafficMap = new Map();\n\nfor (const item of trafficWebsitesData) {\n\n  if (!item.domain) continue;\n\n  const current = trafficMap.get(item.domain);\n\n  if (\n    !current ||\n    item.views > current.views\n  ) {\n    trafficMap.set(item.domain, item);\n  }\n}\n\ntrafficWebsitesData =\n  [...trafficMap.values()];\n\n\n// ======================================================\n// 8. TOP SEARCH PERFORMANCE\n// ======================================================\n\nconst topSearch = [...searchWebsitesData]\n  .sort((a, b) => {\n\n    if (b.clicks !== a.clicks) {\n      return b.clicks - a.clicks;\n    }\n\n    return b.impressions - a.impressions;\n  })\n  .slice(0, 5);\n\n\n// ======================================================\n// 9. TOP GA4 TRAFFIC\n// ======================================================\n\nconst topTraffic = [...trafficWebsitesData]\n  .filter(x =>\n    x.views > 0 ||\n    x.visitors > 0 ||\n    x.sessions > 0\n  )\n  .sort((a, b) => {\n\n    if (b.views !== a.views) {\n      return b.views - a.views;\n    }\n\n    if (b.visitors !== a.visitors) {\n      return b.visitors - a.visitors;\n    }\n\n    return b.sessions - a.sessions;\n  })\n  .slice(0, 5);\n\n\n// ======================================================\n// 10. BUILD COMBINED WEBSITE MAP\n// ======================================================\n\nconst combinedMap = new Map();\n\nfor (const site of searchWebsitesData) {\n\n  combinedMap.set(site.domain, {\n    domain: site.domain,\n\n    clicks: site.clicks,\n    impressions: site.impressions,\n    ctr: site.ctr,\n    position: site.position,\n\n    views: 0,\n    visitors: 0,\n    sessions: 0\n  });\n}\n\nfor (const site of trafficWebsitesData) {\n\n  const existing =\n    combinedMap.get(site.domain) || {\n      domain: site.domain,\n\n      clicks: 0,\n      impressions: 0,\n      ctr: 0,\n      position: 0,\n\n      views: 0,\n      visitors: 0,\n      sessions: 0\n    };\n\n  existing.views = site.views;\n  existing.visitors = site.visitors;\n  existing.sessions = site.sessions;\n\n  combinedMap.set(\n    site.domain,\n    existing\n  );\n}\n\n\n// ======================================================\n// 11. TOP COMBINED PERFORMANCE\n// ======================================================\n\nconst combinedWebsites =\n  [...combinedMap.values()]\n    .sort((a, b) => {\n\n      // Prioritize meaningful performance\n      const scoreA =\n        (a.clicks * 100000) +\n        (a.views * 1000) +\n        a.impressions;\n\n      const scoreB =\n        (b.clicks * 100000) +\n        (b.views * 1000) +\n        b.impressions;\n\n      return scoreB - scoreA;\n    })\n    .slice(0, 10);\n\n\n// ======================================================\n// 12. COMBINED TABLE\n// ======================================================\n\nconst header =\n  `${pad('Website', 28)} ` +\n  `${pad('Clk', 4, true)} ` +\n  `${pad('Impr', 6, true)} ` +\n  `${pad('View', 5, true)} ` +\n  `${pad('User', 5, true)}`;\n\nconst separator =\n  `${'-'.repeat(28)} ` +\n  `${'-'.repeat(4)} ` +\n  `${'-'.repeat(6)} ` +\n  `${'-'.repeat(5)} ` +\n  `${'-'.repeat(5)}`;\n\nconst rows = combinedWebsites.map(site =>\n\n  `${pad(shortDomain(site.domain, 28), 28)} ` +\n  `${pad(fmt(site.clicks), 4, true)} ` +\n  `${pad(fmt(site.impressions), 6, true)} ` +\n  `${pad(fmt(site.views), 5, true)} ` +\n  `${pad(fmt(site.visitors), 5, true)}`\n\n).join('\\n');\n\nconst combinedTable =\n`${header}\n${separator}\n${rows || 'No website performance data'}`;\n\n\n// ======================================================\n// 13. TOP SEARCH TEXT\n// ======================================================\n\nconst topSearchText =\n  topSearch.length > 0\n\n    ? topSearch.map((site, index) =>\n\n        `*${index + 1}. ${site.domain}*\\n` +\n        `🔗 ${fmt(site.clicks)} clicks  •  ` +\n        `👁 ${fmt(site.impressions)} impressions\\n` +\n        `CTR ${dec(site.ctr)}%  •  ` +\n        `Avg Position ${dec(site.position)}`\n\n      ).join('\\n\\n')\n\n    : 'No Search Console performance data available.';\n\n\n// ======================================================\n// 14. TOP TRAFFIC TEXT\n// ======================================================\n\nconst topTrafficText =\n  topTraffic.length > 0\n\n    ? topTraffic.map((site, index) =>\n\n        `*${index + 1}. ${site.domain}*\\n` +\n        `👁 ${fmt(site.views)} views  •  ` +\n        `👥 ${fmt(site.visitors)} visitors  •  ` +\n        `🔄 ${fmt(site.sessions)} sessions`\n\n      ).join('\\n\\n')\n\n    : 'No GA4 website traffic recorded for this period.';\n\n\n// ======================================================\n// 15. RANKING ATTENTION\n// ======================================================\n\nlet rankingAttention = [];\n\nconst seoText = String(\n  seo.slackMessage ||\n  seo.message ||\n  ''\n);\n\nfor (const line of seoText.split('\\n')) {\n\n  const match = line.match(\n    /^\\s*\\d+\\.\\s+(.+?)\\s+[—-]\\s+([\\d,]+)\\s+impressions?,\\s+Avg\\s+Pos\\.?\\s+([\\d.]+)/i\n  );\n\n  if (!match) continue;\n\n  rankingAttention.push({\n    domain: normalizeDomain(match[1]),\n\n    impressions:\n      num(match[2].replace(/,/g, '')),\n\n    position:\n      num(match[3])\n  });\n}\n\n\n// fallback\nif (!rankingAttention.length) {\n\n  rankingAttention =\n    searchWebsitesData\n      .filter(x => x.position >= 30)\n      .map(x => ({\n        domain: x.domain,\n        impressions: x.impressions,\n        position: x.position\n      }));\n}\n\nrankingAttention =\n  rankingAttention\n    .sort((a, b) =>\n      b.impressions - a.impressions\n    )\n    .slice(0, 5);\n\nconst attentionText =\n  rankingAttention.length\n\n    ? rankingAttention.map((site, index) => {\n\n        const icon =\n          site.position >= 60\n            ? '🔴'\n            : site.position >= 40\n              ? '🟠'\n              : '🟡';\n\n        return (\n          `${icon} *${index + 1}. ${site.domain}*\\n` +\n          `${fmt(site.impressions)} impressions  •  ` +\n          `Avg Position ${dec(site.position)}`\n        );\n\n      }).join('\\n\\n')\n\n    : '🟢 No major ranking issues detected.';\n\n\n// ======================================================\n// 16. MANAGEMENT INSIGHTS\n// ======================================================\n\nconst bestSearch =\n  topSearch[0] || null;\n\nconst bestTraffic =\n  topTraffic[0] || null;\n\nlet managementInsights = '';\n\nif (bestSearch) {\n\n  managementInsights +=\n    `🏆 *Best Search Performer:* ` +\n    `${bestSearch.domain} — ` +\n    `${fmt(bestSearch.clicks)} clicks\\n`;\n}\n\nif (bestTraffic) {\n\n  managementInsights +=\n    `👥 *Highest Traffic:* ` +\n    `${bestTraffic.domain} — ` +\n    `${fmt(bestTraffic.views)} views\\n`;\n}\n\nmanagementInsights +=\n  `🔎 *Search Coverage:* ${searchCoverage.toFixed(1)}%\\n` +\n  `📊 *GA4 Coverage:* ${analyticsCoverage.toFixed(1)}%\\n` +\n  `📈 *Portfolio CTR:* ${dec(overallCtr)}%\\n` +\n  `📍 *Average Google Position:* ${dec(averagePosition)}`;\n\nif (totalSessions > 0) {\n\n  managementInsights +=\n    `\\n⚡ *Engaged Session Rate:* ` +\n    `${engagementRate.toFixed(1)}%`;\n}\n\n\n// ======================================================\n// 17. SLACK BLOCK KIT DASHBOARD\n// ======================================================\n\nconst blocks = [\n\n  // HEADER\n  {\n    type: 'header',\n    text: {\n      type: 'plain_text',\n      text: '📊 ZENITH WEBSITE PERFORMANCE DASHBOARD',\n      emoji: true\n    }\n  },\n\n  {\n    type: 'context',\n    elements: [\n      {\n        type: 'mrkdwn',\n        text:\n          `📅 *${generatedDate} ${generatedTime}*  |  ` +\n          `🔎 Search: *${searchDate}*  |  ` +\n          `📈 Traffic: *${analyticsDate}*`\n      }\n    ]\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // PORTFOLIO HEALTH\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text: '*🌐 PORTFOLIO HEALTH*'\n    }\n  },\n\n  {\n    type: 'section',\n    fields: [\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*🔎 Search Visibility*\\n` +\n          `🟢 *${fmt(searchWithData)} / ${fmt(searchWebsites)}* websites\\n` +\n          `*${searchCoverage.toFixed(1)}% coverage*`\n      },\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*📊 Analytics Coverage*\\n` +\n          `🟢 *${fmt(ga4WithData)} / ${fmt(ga4Websites)}* websites\\n` +\n          `*${analyticsCoverage.toFixed(1)}% coverage*`\n      },\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*⚠️ No Search Data*\\n` +\n          `${fmt(noSearchData)} websites`\n      },\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*⚠️ No GA4 Data*\\n` +\n          `${fmt(noAnalyticsData)} websites`\n      }\n    ]\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // KPI\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text: '*📈 EXECUTIVE KPI SNAPSHOT*'\n    }\n  },\n\n  {\n    type: 'section',\n    fields: [\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*🔎 GOOGLE SEARCH*\\n\\n` +\n          `*${fmt(totalClicks)}* Clicks\\n` +\n          `*${fmt(totalImpressions)}* Impressions\\n` +\n          `*${dec(overallCtr)}%* CTR\\n` +\n          `*${dec(averagePosition)}* Avg Position`\n      },\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*👥 WEBSITE TRAFFIC*\\n\\n` +\n          `*${fmt(totalViews)}* Views\\n` +\n          `*${fmt(totalVisitors)}* Visitors\\n` +\n          `*${fmt(totalSessions)}* Sessions\\n` +\n          `*${fmt(totalNewUsers)}* New Users`\n      }\n    ]\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // COMBINED TABLE\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text:\n        '*🏆 COMBINED WEBSITE PERFORMANCE*\\n' +\n        'Search Console + Google Analytics 4'\n    }\n  },\n\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text:\n        '```' +\n        combinedTable +\n        '```'\n    }\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // TWO LEADERBOARDS\n  {\n    type: 'section',\n    fields: [\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*🔎 TOP SEARCH PERFORMANCE*\\n\\n` +\n          topSearchText\n      },\n\n      {\n        type: 'mrkdwn',\n        text:\n          `*📈 TOP GA4 TRAFFIC*\\n\\n` +\n          topTrafficText\n      }\n    ]\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // ATTENTION\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text:\n        `*⚠️ RANKING ATTENTION*\\n\\n` +\n        attentionText\n    }\n  },\n\n  {\n    type: 'divider'\n  },\n\n\n  // MANAGEMENT\n  {\n    type: 'section',\n    text: {\n      type: 'mrkdwn',\n      text:\n        `*💡 MANAGEMENT INSIGHTS*\\n\\n` +\n        managementInsights\n    }\n  },\n\n  {\n    type: 'divider'\n  },\n\n  {\n    type: 'context',\n    elements: [\n      {\n        type: 'mrkdwn',\n        text:\n          '✅ *Zenith automated Search Console + GA4 monitoring completed successfully.*'\n      }\n    ]\n  }\n];\n\n\n// ======================================================\n// 18. FALLBACK TEXT\n// ======================================================\n\nconst message =\n`📊 ZENITH WEBSITE PERFORMANCE DASHBOARD\n\n🔎 Search: ${searchDate}\n📈 Traffic: ${analyticsDate}\n\nSearch\nClicks: ${fmt(totalClicks)}\nImpressions: ${fmt(totalImpressions)}\nCTR: ${dec(overallCtr)}%\nAvg Position: ${dec(averagePosition)}\n\nTraffic\nViews: ${fmt(totalViews)}\nVisitors: ${fmt(totalVisitors)}\nSessions: ${fmt(totalSessions)}\nNew Users: ${fmt(totalNewUsers)}`;\n\n\n// ======================================================\n// 19. OUTPUT\n// ======================================================\n\nreturn [\n  {\n    json: {\n      message,\n      blocks\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2688,
+        -3664
+      ],
+      "id": "6a3620f3-3952-438f-b2e4-d5c1f880f26c",
+      "name": "Build Combined Slack Report"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://slack.com/api/chat.postMessage",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "slackApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({\n  channel: \"REPLACE_WITH_SLACK_DESTINATION_1\",\n  text: $json.message,\n  blocks: $json.blocks,\n  unfurl_links: false,\n  unfurl_media: false\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        2912,
+        -3664
+      ],
+      "id": "03808157-99a8-44b8-83dd-45cc675322dd",
+      "name": "HTTP Request — Slack"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://analyticsdata.googleapis.com/v1beta/properties/{{ $json.propertyId }}:runRealtimeReport",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n  \"metrics\": [\n    {\n      \"name\": \"activeUsers\"\n    },\n    {\n      \"name\": \"screenPageViews\"\n    }\n  ]\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -544,
+        -3888
+      ],
+      "id": "5614c982-8425-4b6a-818c-3298f348b695",
+      "name": "Fetch GA4 Realtime Test"
+    },
+    {
+      "parameters": {
+        "jsCode": "const responses = $input.all();\nconst properties = $('Select Preferred GA4 Properties').all();\n\nconst output = [];\n\nfor (let i = 0; i < responses.length; i++) {\n\n  const response = responses[i]?.json || {};\n  const source = properties[i]?.json || {};\n\n  const row =\n    Array.isArray(response.rows) && response.rows.length > 0\n      ? response.rows[0]\n      : null;\n\n  const values =\n    row && Array.isArray(row.metricValues)\n      ? row.metricValues\n      : [];\n\n  const activeUsers =\n    Number(values[0]?.value || 0);\n\n  const pageViews =\n    Number(values[1]?.value || 0);\n\n  output.push({\n    json: {\n      domain: source.domain || '',\n      website: source.website || '',\n      propertyId: source.propertyId || '',\n      measurementId: source.measurementId || '',\n\n      activeUsers,\n      pageViews,\n\n      realtimeStatus:\n        activeUsers > 0 || pageViews > 0\n          ? 'GA4 Realtime Working'\n          : 'No Realtime Data'\n    }\n  });\n}\n\nreturn output;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -352,
+        -3888
+      ],
+      "id": "7badf64b-6bb1-47a8-98c0-f4756e0cbcbe",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "content": "Google Account 2\n\ntop10"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -1232,
+        256
+      ],
+      "id": "edd8ebb4-01c0-4224-b80c-6658b09aa6ec",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "Google Account 3\n\nsales"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -848,
+        -1136
+      ],
+      "id": "8d08536d-6f11-4a40-99ff-cb4b3d26c29d",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "Google Account 4\n\nzenith developer"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -912,
+        -2944
+      ],
+      "id": "097468b0-3052-4274-a217-629b6bb23995",
+      "name": "Sticky Note2"
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [
+        [
+          {
+            "node": "List Search Console Sites",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List Search Console Sites 2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List Search Console Sites3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "List GA4 Properties1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Search Console Sites": {
+      "main": [
+        [
+          {
+            "node": "Split Search Console Sites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Search Console Sites": {
+      "main": [
+        [
+          {
+            "node": "Fetch Search Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Page Performance",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Monthly Analytics",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Query Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Search Analytics": {
+      "main": [
+        [
+          {
+            "node": "Clean Daily KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Daily KPIs": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Fetch Page Performance": {
+      "main": [
+        [
+          {
+            "node": "Clean Page Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Page Performance": {
+      "main": [
+        [
+          {
+            "node": "Merge Page Performance Accounts2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Daily_Summary": {
+      "main": [
+        [
+          {
+            "node": "Build Slack Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Analytics": {
+      "main": [
+        [
+          {
+            "node": "Clean Weekly KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Weekly KPIs": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Accounts2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Monthly Analytics": {
+      "main": [
+        [
+          {
+            "node": "Clean Monthly KPIs",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Monthly KPIs": {
+      "main": [
+        [
+          {
+            "node": "Merge Monthly Accounts2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Query Performance": {
+      "main": [
+        [
+          {
+            "node": "Clean Query Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Query Performance": {
+      "main": [
+        [
+          {
+            "node": "Merge Query Accounts2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Slack Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Search Console Sites 2": {
+      "main": [
+        [
+          {
+            "node": "Split Search Console Sites2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Search Console Sites2": {
+      "main": [
+        [
+          {
+            "node": "Fetch Search Analytics2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Analytics2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Monthly Analytics2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Page Performance2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Query Performance2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Search Analytics2": {
+      "main": [
+        [
+          {
+            "node": "Clean Daily KPIs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Daily KPIs2": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Remove Daily Duplicates",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Daily Duplicates": {
+      "main": [
+        [
+          {
+            "node": "Daily_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Analytics2": {
+      "main": [
+        [
+          {
+            "node": "Clean Weekly KPIs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Weekly KPIs2": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Weekly Accounts2": {
+      "main": [
+        [
+          {
+            "node": "Remove Weekly Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Weekly Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Weekly_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Search Console Sites3": {
+      "main": [
+        [
+          {
+            "node": "Split Search Console Sites3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Search Console Sites3": {
+      "main": [
+        [
+          {
+            "node": "Fetch Search Analytics3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Weekly Analytics3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Monthly Analytics3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Page Performance3",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch Query Performance3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Search Analytics3": {
+      "main": [
+        [
+          {
+            "node": "Clean Daily KPIs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Weekly Analytics3": {
+      "main": [
+        [
+          {
+            "node": "Clean Weekly KPIs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Daily KPIs3": {
+      "main": [
+        [
+          {
+            "node": "Merge1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Weekly KPIs3": {
+      "main": [
+        [
+          {
+            "node": "Merge2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Monthly Analytics2": {
+      "main": [
+        [
+          {
+            "node": "Clean Monthly KPIs2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page Performance2": {
+      "main": [
+        [
+          {
+            "node": "Clean Page Performance2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Query Performance2": {
+      "main": [
+        [
+          {
+            "node": "Clean Query Performance2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Monthly KPIs2": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Clean Page Performance2": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Clean Query Performance2": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge Monthly Accounts2": {
+      "main": [
+        [
+          {
+            "node": "Remove Monthly Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Page Performance Accounts2": {
+      "main": [
+        [
+          {
+            "node": "Remove Page Performance Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Query Accounts2": {
+      "main": [
+        [
+          {
+            "node": "Remove Query Duplicates2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Monthly Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Monthly_Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Page Performance Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Page_Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remove Query Duplicates2": {
+      "main": [
+        [
+          {
+            "node": "Query_Performance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Monthly Analytics3": {
+      "main": [
+        [
+          {
+            "node": "Clean Monthly KPIs3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Monthly KPIs3": {
+      "main": [
+        [
+          {
+            "node": "Merge3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Page Performance3": {
+      "main": [
+        [
+          {
+            "node": "Clean Page Performance3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Page Performance3": {
+      "main": [
+        [
+          {
+            "node": "Merge4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch Query Performance3": {
+      "main": [
+        [
+          {
+            "node": "Clean Query Performance3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean Query Performance3": {
+      "main": [
+        [
+          {
+            "node": "Merge5",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge1": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge2": {
+      "main": [
+        [
+          {
+            "node": "Merge Weekly Accounts2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge3": {
+      "main": [
+        [
+          {
+            "node": "Merge Monthly Accounts2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge4": {
+      "main": [
+        [
+          {
+            "node": "Merge Page Performance Accounts2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge5": {
+      "main": [
+        [
+          {
+            "node": "Merge Query Accounts2",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        []
+      ]
+    },
+    "Fetch GA4 Daily Traffic": {
+      "main": [
+        [
+          {
+            "node": "Clean GA4 Daily Traffic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean GA4 Daily Traffic": {
+      "main": [
+        []
+      ]
+    },
+    "List GA4 Properties": {
+      "main": [
+        []
+      ]
+    },
+    "Split GA4 Properties": {
+      "main": [
+        [
+          {
+            "node": "List GA4 Data Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List GA4 Data Streams": {
+      "main": [
+        [
+          {
+            "node": "Clean GA4 Properties & Streams",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean GA4 Properties & Streams": {
+      "main": [
+        [
+          {
+            "node": "Select Preferred GA4 Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GA4 Daily All Properties": {
+      "main": [
+        [
+          {
+            "node": "Clean GA4 Daily All Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean GA4 Daily All Properties": {
+      "main": [
+        [
+          {
+            "node": "GA4 Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GA4 Weekly All Properties": {
+      "main": [
+        [
+          {
+            "node": "Clean GA4 Weekly All Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean GA4 Weekly All Properties": {
+      "main": [
+        [
+          {
+            "node": "GA4 Weekly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GA4 Monthly All Properties": {
+      "main": [
+        [
+          {
+            "node": "Clean GA4 Monthly All Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean GA4 Monthly All Properties": {
+      "main": [
+        [
+          {
+            "node": "GA4 Monthly Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Select Preferred GA4 Properties": {
+      "main": [
+        [
+          {
+            "node": "Fetch GA4 Daily All Properties",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch GA4 Weekly All Properties",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch GA4 Monthly All Properties",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Fetch GA4 Realtime Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List GA4 Properties1": {
+      "main": [
+        [
+          {
+            "node": "Split GA4 Properties",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4 Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "GA4 Build Slack Daily Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4 Build Slack Daily Summary": {
+      "main": [
+        [
+          {
+            "node": "Merge6",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge6": {
+      "main": [
+        [
+          {
+            "node": "Build Combined Slack Report",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build Combined Slack Report": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request — Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fetch GA4 Realtime Test": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

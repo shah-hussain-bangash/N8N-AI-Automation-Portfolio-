@@ -21,8 +21,17 @@ A sequenced collection of AI-assisted lead operations, customer response workflo
 | 13 | [Zenith Slack AI Bot](workflows/13-zenith-slack-ai-bot/README.md) | [JSON](workflows/13-zenith-slack-ai-bot/workflow.json) | 8 |
 | 14 | [GA4 Daily Collector](workflows/14-ga4-daily-collector/README.md) | [JSON](workflows/14-ga4-daily-collector/workflow.json) | 7 |
 | 15 | [GSC Daily Collector](workflows/15-gsc-daily-collector/README.md) | [JSON](workflows/15-gsc-daily-collector/workflow.json) | 7 |
+| 16 | [Website Uptime Monitor](workflows/16-uptime-monitor/README.md) | [JSON](workflows/16-uptime-monitor/workflow.json) | 7 |
+| 17 | [PageSpeed Performance Monitor](workflows/17-pagespeed-monitor/README.md) | [JSON](workflows/17-pagespeed-monitor/workflow.json) | 7 |
+| 18 | [Keyword Ranking Collector](workflows/18-keyword-ranking/README.md) | [JSON](workflows/18-keyword-ranking/workflow.json) | 7 |
+| 19 | [Master Traffic Orchestrator](workflows/19-master-traffic-orchestrator/README.md) | [JSON](workflows/19-master-traffic-orchestrator/workflow.json) | 13 |
+| 20 | [EspoCRM Lead Management](workflows/20-espocrm-lead-management/README.md) | [JSON](workflows/20-espocrm-lead-management/workflow.json) | 34 |
+| 21 | [EspoCRM Email Reply Management](workflows/21-espocrm-email-reply-management/README.md) | [JSON](workflows/21-espocrm-email-reply-management/workflow.json) | 50 |
+| 22 | [Social Media Post Automation](workflows/22-social-media-post-automation/README.md) | [JSON](workflows/22-social-media-post-automation/workflow.json) | 36 |
+| 23 | [AI Outbound Call Agent](workflows/23-ai-outbound-call-agent/README.md) | [JSON](workflows/23-ai-outbound-call-agent/workflow.json) | 8 |
+| 24 | [Multi-site Traffic Monitoring](workflows/24-multi-site-traffic-monitoring/README.md) | [JSON](workflows/24-multi-site-traffic-monitoring/workflow.json) | 85 |
 
-The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These fifteen workflows are independent exports; numbering does not imply automatic cross-workflow execution.
+The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These 24 projects are supplied exports; numbering does not configure n8n workflow IDs. Project 19 calls collectors 14–18 after their destinations are selected during setup.
 
 ## Getting started
 
@@ -30,9 +39,9 @@ Open a project README, import its workflow JSON into n8n, configure the listed c
 
 ## Publication status
 
-All fifteen exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
+All 24 exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
 
-No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the fifteen supplied exports; it does not claim the earlier archive collections have been uploaded.
+No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the 24 supplied exports; it does not claim the earlier archive collections have been uploaded.
 
 ## Repository layout
 
@@ -53,6 +62,15 @@ workflows/
   13-zenith-slack-ai-bot/
   14-ga4-daily-collector/
   15-gsc-daily-collector/
+  16-uptime-monitor/
+  17-pagespeed-monitor/
+  18-keyword-ranking/
+  19-master-traffic-orchestrator/
+  20-espocrm-lead-management/
+  21-espocrm-email-reply-management/
+  22-social-media-post-automation/
+  23-ai-outbound-call-agent/
+  24-multi-site-traffic-monitoring/
     README.md
     CONFIGURATION.md
     workflow.json
@@ -60,3 +78,7 @@ workflows/
 ```
 
 Each project directory contains the same four files. Attribution and existing public template references remain with their respective workflows.
+
+## Traffic monitoring suite
+
+Import and configure [collectors 14–18 and master orchestrator 19](workflows/19-master-traffic-orchestrator/README.md#collector-import-and-mapping-order) using the destination mapping guide. Reassign all subworkflow IDs after import. [Project 24](workflows/24-multi-site-traffic-monitoring/README.md) is a separate multi-site reporting export; its source filename does not establish that 320 sites have been load-tested.

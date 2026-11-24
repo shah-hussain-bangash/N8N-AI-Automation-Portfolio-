@@ -1,0 +1,339 @@
+{
+  "name": "WF-06 Uptime Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Website_ID"
+            },
+            {
+              "name": "Domain"
+            }
+          ]
+        }
+      },
+      "id": "53c25ff6-9bec-4c3b-a6fb-2dca49ef8722",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-domain",
+              "leftValue": "={{ $json.Domain }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2d3a00ac-3647-431e-bb52-802254b4d704",
+      "name": "Has Domain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.Domain.startsWith(\"http\") ? $json.Domain : \"https://\" + $json.Domain }}",
+        "options": {
+          "redirect": {
+            "redirect": {}
+          },
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          },
+          "timeout": 15000
+        }
+      },
+      "id": "48d414cb-b2db-46d2-b9f0-3b002de0e590",
+      "name": "Check Website",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const websiteId = $('Execute Workflow Trigger').first().json.Website_ID || '';\nconst domain = $('Execute Workflow Trigger').first().json.Domain || '';\n\nconst resp = $input.first() ? $input.first().json : {};\nlet code = Number(resp.statusCode || resp.status || 0);\n// If the request errored, n8n error output may not carry a status code\nconst up = code >= 200 && code < 400;\n\nreturn [{\n  json: {\n    Website_ID: websiteId,\n    Domain: domain,\n    status_code: code,\n    status: up ? 'Up' : 'Down',\n    ok: true,\n    message: up ? 'Site is up' : ('Site is down (HTTP ' + code + ')'),\n    checked_at: $now.toISO(),\n  },\n}];"
+      },
+      "id": "1bca7104-225b-415c-a590-c00a824c50f0",
+      "name": "Classify Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "down",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "Down",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "e535c0b8-631d-4b22-9802-d1dcc31b7d55",
+      "name": "Is Down?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Alerts"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Domain": "={{ $json.Domain }}",
+            "Alert_Type": "Uptime",
+            "Severity": "Critical",
+            "Message": "={{ $json.message }}",
+            "Date": "={{ $json.checked_at }}"
+          },
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Alert_Type",
+              "displayName": "Alert_Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Severity",
+              "displayName": "Severity",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6b423900-dd7e-4dcc-8324-32fa06456045",
+      "name": "Log Downtime Alert",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "Website_ID",
+              "value": "={{ $json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "collector",
+              "value": "Uptime",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e4",
+              "name": "status",
+              "value": "Unknown",
+              "type": "string"
+            },
+            {
+              "id": "e5",
+              "name": "message",
+              "value": "Skipped: missing Domain",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9b962825-6803-4993-a6c5-62ffea7674b1",
+      "name": "Status Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has Domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Domain?": {
+      "main": [
+        [
+          {
+            "node": "Check Website",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Website": {
+      "main": [
+        [
+          {
+            "node": "Classify Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classify Status": {
+      "main": [
+        [
+          {
+            "node": "Is Down?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Down?": {
+      "main": [
+        [
+          {
+            "node": "Log Downtime Alert",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

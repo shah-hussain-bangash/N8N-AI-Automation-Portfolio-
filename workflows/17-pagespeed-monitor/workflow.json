@@ -1,0 +1,366 @@
+{
+  "name": "WF-07 PageSpeed Monitor",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Website_ID"
+            },
+            {
+              "name": "Domain"
+            }
+          ]
+        }
+      },
+      "id": "301a1100-5043-403a-b4fa-b4172f71774b",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-domain",
+              "leftValue": "={{ $json.Domain }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d38d28d2-5087-45eb-8aec-ffe94989eb17",
+      "name": "Has Domain?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/pagespeedonline/v5/runPagespeed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpTemplatedCustomAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "url",
+              "value": "={{ $json.Domain.startsWith(\"http\") ? $json.Domain : \"https://\" + $json.Domain }}"
+            },
+            {
+              "name": "strategy",
+              "value": "mobile"
+            },
+            {
+              "name": "category",
+              "value": "performance"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 60000
+        }
+      },
+      "id": "449ab6f9-63a5-4358-9d37-0a258121866e",
+      "name": "PageSpeed Insights",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const websiteId = $('Execute Workflow Trigger').first().json.Website_ID || '';\nconst domain = $('Execute Workflow Trigger').first().json.Domain || '';\n\nconst resp = $input.first() ? $input.first().json : {};\nconst lr = resp.lighthouseResult || {};\nconst cats = lr.categories || {};\nconst perf = cats.performance || {};\nconst audits = lr.audits || {};\n\nconst score = perf.score != null ? Math.round(Number(perf.score) * 100) : null;\nconst fcp = audits['first-contentful-paint'] ? audits['first-contentful-paint'].displayValue : '';\nconst lcp = audits['largest-contentful-paint'] ? audits['largest-contentful-paint'].displayValue : '';\n\nreturn [{\n  json: {\n    Website_ID: websiteId,\n    Domain: domain,\n    Date: $today.toISODate(),\n    Performance_Score: score,\n    FCP: fcp,\n    LCP: lcp,\n    ok: score != null,\n  },\n}];"
+      },
+      "id": "6f4137e8-bc7a-4798-a671-b9c4cc4308a4",
+      "name": "Extract Scores",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "PageSpeed"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Website_ID",
+            "Date"
+          ],
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Domain": "={{ $json.Domain }}",
+            "Date": "={{ $json.Date }}",
+            "Performance_Score": "={{ $json.Performance_Score }}",
+            "FCP": "={{ $json.FCP }}",
+            "LCP": "={{ $json.LCP }}"
+          },
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Performance_Score",
+              "displayName": "Performance_Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "FCP",
+              "displayName": "FCP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "LCP",
+              "displayName": "LCP",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "acef3126-f617-40ad-87a5-7ec365fcc779",
+      "name": "Upsert PageSpeed",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "Website_ID",
+              "value": "={{ $('Execute Workflow Trigger').first().json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "collector",
+              "value": "PageSpeed",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "s4",
+              "name": "performance_score",
+              "value": "={{ $('Extract Scores').first().json.Performance_Score }}",
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "message",
+              "value": "PageSpeed score recorded",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "71791354-21cc-45a3-80b6-5b33e7ce653e",
+      "name": "Status OK",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "Website_ID",
+              "value": "={{ $json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "collector",
+              "value": "PageSpeed",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e5",
+              "name": "message",
+              "value": "Skipped: missing Domain",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "29b93127-1a11-4d51-9744-89508773f0b1",
+      "name": "Status Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has Domain?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Domain?": {
+      "main": [
+        [
+          {
+            "node": "PageSpeed Insights",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "PageSpeed Insights": {
+      "main": [
+        [
+          {
+            "node": "Extract Scores",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Scores": {
+      "main": [
+        [
+          {
+            "node": "Upsert PageSpeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert PageSpeed": {
+      "main": [
+        [
+          {
+            "node": "Status OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

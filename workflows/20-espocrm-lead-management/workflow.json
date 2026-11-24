@@ -1,0 +1,1415 @@
+{
+  "name": "EspoCRM Lead Managament Automation Complete",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "configure-lead-webhook-path",
+        "options": {}
+      },
+      "id": "98838553-e379-43f2-8b0e-be65d1136ad8",
+      "name": "Lead Webhook (HTTP)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -208,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "name",
+              "leftValue": "={{ $json.body.Name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "email",
+              "leftValue": "={{ $json.body.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "phone",
+              "leftValue": "={{ $json.body.Message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "25350401-cfc3-4acf-9b9c-4cebcecd7d66",
+              "leftValue": "={{ $json.body.Phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "dc9464d2-beaf-4e29-baa1-b234a1caa3f2",
+              "leftValue": "={{ $json.body.Budget }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "419980e6-bfae-4cb1-bb9a-4571827007c8",
+              "leftValue": "={{ $json.body['Area Preference'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "0d54f62c-bd34-4183-b44d-c4f0a278de79",
+              "leftValue": "={{ $json.body.Date }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "89d92ab3-3dfb-4fbf-b5ca-cf43804e9548",
+              "leftValue": "={{ $json.body.Time }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "66d39f94-45e6-496d-8113-0218bb427e3b",
+              "leftValue": "={{ $json.body['Page URL'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cc4d2646-ff8d-4187-8b68-042870756a5c",
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        320,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "={{ $('Lead Webhook (HTTP)').item.json.body.Message }}",
+        "otherOptions": {}
+      },
+      "id": "4c892bb9-a8ef-4b2e-a1d7-b8180b924cc7",
+      "name": "Send Error Alert (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        592,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dup",
+              "leftValue": "={{ $json.total }}",
+              "rightValue": 0,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "fb8a23d8-6133-4eea-913a-54977416b1ac",
+      "name": "Duplicate Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        176
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a Dubai real estate lead qualification AI.\n\nAnalyse this website lead:\n\nName: {{ $('Validate Required Fields').item.json.body.Name }}\nEmail: {{ $('Validate Required Fields').item.json.body.Email }}\nMobile: {{ $('Validate Required Fields').item.json.body.Phone }}\nMessage: {{ $('Validate Required Fields').item.json.body.Message }}\nBudget: {{ $('Validate Required Fields').item.json.body.Budget }}\nArea Preference: {{ $('Validate Required Fields').item.json.body['Area Preference'] }}\nWebsite: {{ $('Validate Required Fields').item.json.body.Website }}\n\nReturn valid JSON only. Do not include markdown, code fences, or explanations.\n\nUse exactly this structure:\n\n{\n  \"AI Priority\": \"High\",\n  \"AI Lead Score\": 85,\n  \"AI Lead Type\": \"Hot\",\n  \"Language\": \"English\",\n  \"Sentiment\": \"Positive\",\n  \"Assigned Team\": \"Investment Team\",\n  \"Investment Type\": \"Pool Investment\",\n  \"Property Type\": \"Apartment\",\n  \"ROI Interest\": \"High\"\n}\n\nAllowed values:\n\nAI Priority:\nHigh, Medium, Low\n\nAI Lead Type:\nHot, Warm, Cold\n\nSentiment:\nPositive, Neutral, Negative\n\nAssigned Team:\nInvestment Team, Off-Plan Team, Joint Venture Team, Property Development Team, General Sales Team\n\nInvestment Type:\nPool Investment, Off-Plan, Joint Venture, Property Development, Ready Property, General Enquiry\n\nProperty Type:\nApartment, Villa, Townhouse, Plot, Commercial, Not Specified\n\nROI Interest:\nHigh, Medium, Low, Not Specified\n\nAI Lead Score must be an integer between 0 and 100.\n\nDo not invent details that are not supported by the submitted lead information."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "65a69d67-3cae-4a06-be3b-634bd09b1373",
+      "name": "AI Classify & Score Lead",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1376,
+        272
+      ],
+      "retryOnFail": true,
+      "maxTries": 5,
+      "waitBetweenTries": 5000
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=You are a professional Dubai real estate sales assistant for Zenith Group.\n\nYour task is to draft a personalized professional Email and WhatsApp response for a real estate lead.\n\nLEAD INFORMATION\n\nName: {{ $json.Name || '' }}\nEmail: {{ $json.Email || '' }}\nPhone: {{ $json.Phone || '' }}\nMessage: {{ $json.Message || '' }}\nWebsite: {{ $json.Website || '' }}\nBudget: {{ $json.Budget || 'Not specified' }}\nArea Preference: {{ $json.AreaPreference || 'Not specified' }}\nAI Priority: {{ $json.AIPriority || 'Not Classified' }}\nAI Lead Score: {{ $json.AILeadScore || 0 }}\nAI Lead Type: {{ $json.AILeadType || 'Not Classified' }}\nLanguage: {{ $json.Language || 'English' }}\nSentiment: {{ $json.Sentiment || 'Unknown' }}\nInvestment Type: {{ $json.InvestmentType || 'Not specified' }}\nProperty Type: {{ $json.PropertyType || 'Not specified' }}\nROI Interest: {{ $json.ROIInterest || 'Not specified' }}\n\nINSTRUCTIONS\n\nCreate a professional response based on the customer's actual enquiry.\n\nEmail:\n- Personalize using the customer's name.\n- Acknowledge their enquiry.\n- Do not invent property prices, ROI percentages, projects, locations, availability, or guarantees.\n- If Budget or Area Preference is not provided, do not pretend that it was provided.\n- Encourage the customer to continue the discussion with the Zenith Group property development team.\n- Keep the email professional, clear and concise.\n\nWhatsApp:\n- Keep it under 80 words.\n- Personalize with the customer's name.\n- Directly acknowledge their enquiry.\n- Keep the tone professional and friendly.\n- Encourage further discussion.\n\nUse this exact email signature:\n\nKind regards,\nZenith Group\nDubai Property Development Team\n\nReturn ONLY valid JSON.\n\nDo not use markdown.\nDo not use ```json.\nDo not include any explanation before or after the JSON.\n\nUse exactly this structure:\n\n{\n  \"Subject\": \"\",\n  \"EmailDraft\": \"\",\n  \"WhatsAppDraft\": \"\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a real-estate sales assistant. Respond with a strict JSON object containing: EmailDraft, WhatsAppDraft, Subject, PersonalisedMessage, BrochureSuggestion, ProjectSuggestion.",
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "ebd8c99f-cf74-4ef8-844e-c4cfa65a4a97",
+      "name": "AI Generate Draft",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        2304,
+        80
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Lead Webhook (HTTP)').first().json.body || {};\nconst items = $input.all();\n\nreturn items.map(item => {\n  const j = item.json || {};\n\n  let aiData =\n    j.output?.[0]?.content?.[0]?.text ??\n    j.text ??\n    j.message?.content ??\n    {};\n\n  // Parse AI response if it is returned as text\n  if (typeof aiData === 'string') {\n    aiData = aiData\n      .replace(/```json/gi, '')\n      .replace(/```/g, '')\n      .trim();\n\n    try {\n      aiData = JSON.parse(aiData);\n    } catch (error) {\n      aiData = {};\n    }\n  }\n\n  return {\n    json: {\n      Name:\n        webhook.Name ||\n        webhook.name ||\n        '',\n\n      Email:\n        webhook.Email ||\n        webhook.email ||\n        '',\n\n      Message:\n        webhook.Message ||\n        webhook.message ||\n        '',\n\n      'AI Budget':\n        aiData['AI Budget'] ||\n        aiData.AIBudget ||\n        aiData.Budget ||\n        '',\n\n      Phone:\n        webhook.Phone ||\n        webhook.phone ||\n        webhook.Mobile ||\n        webhook.mobile ||\n        '',\n\n      'AI Area Preference':\n        aiData['AI Area Preference'] ||\n        aiData.AIAreaPreference ||\n        aiData.AreaPreference ||\n        '',\n\n      'Date Received':\n        webhook['Date Received'] ||\n        webhook.Date ||\n        webhook.date ||\n        new Date().toLocaleDateString('en-GB', {\n          timeZone: 'Asia/Dubai'\n        }),\n\n      'Time Received':\n        webhook['Time Received'] ||\n        webhook.Time ||\n        webhook.time ||\n        new Date().toLocaleTimeString('en-US', {\n          timeZone: 'Asia/Dubai',\n          hour: '2-digit',\n          minute: '2-digit',\n          hour12: true\n        }),\n\n      'Page URL':\n        webhook['Page URL'] ||\n        webhook.PageURL ||\n        webhook.page_url ||\n        webhook.url ||\n        '',\n\n      Subject:\n        aiData.Subject ||\n        'Your property enquiry',\n\n      EmailDraft:\n        aiData.EmailDraft ||\n        '',\n\n      WhatsAppDraft:\n        aiData.WhatsAppDraft ||\n        ''\n    }\n  };\n});"
+      },
+      "id": "17e93faa-0eb0-41bd-b081-62fb6cd8a590",
+      "name": "Parse AI Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2640,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🚨 *NEW WEBSITE LEAD*\n\n👤 *Customer Details*\nName: {{$json.Name}}\nEmail: {{$json.Email}}\nPhone: {{$json.Phone}}\n\n💬 *Customer Message*\n{{$json.Message}}\n\n🏠 *Lead Information*\nBudget: {{$json[\"AI Budget\"] || \"Not specified\"}}\nArea Preference: {{$json[\"AI Area Preference\"] || \"Not specified\"}}\nWebsite: {{$json[\"Page URL\"]}}\nReceived: {{$json[\"Date Received\"]}} {{$json[\"Time Received\"]}}\n\n🤖 *AI RESPONSE DRAFT*\n\n*Subject:*\n{{$json.Subject}}\n\n*Email Draft:*\n{{$json.EmailDraft}}\n\n*WhatsApp Draft:*\n{{$json.WhatsAppDraft}}\n\n⚠️ Please review the AI-generated response before approval.",
+        "otherOptions": {}
+      },
+      "id": "3eeb43e2-120e-4a42-b650-822b7e8be461",
+      "name": "Post Lead Summary (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2864,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "message": "=Please review this lead and the AI-generated draft.\n\n👤 Lead Name:\n{{ $('Parse AI Draft').item.json.Name }}\n\n📧 Email:\n{{ $('Parse AI Draft').item.json.Email }}\n\n💬 Customer Message:\n{{ $('Parse AI Draft').item.json.Message }}\n\n📌 Subject:\n{{ $('Parse AI Draft').item.json.Subject }}\n\n📧 Email Draft:\n{{ $('Parse AI Draft').item.json.EmailDraft }}\n\n📱 WhatsApp Draft:\n{{ $('Parse AI Draft').item.json.WhatsAppDraft }}\n\nPlease approve or reject this response.",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "Reject"
+          }
+        },
+        "options": {}
+      },
+      "id": "af0e41bf-a2c1-4ef3-bbe0-c4ccb6e0ea02",
+      "name": "Sales Manager Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3104,
+        192
+      ],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "appr",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "446b7d09-7c6b-4e71-8af5-aab3417c22c3",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3392,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=:leftwards_arrow_with_hook: *Lead returned for further review*\nLead: {{ $('Lead Webhook (HTTP)').item.json.body.name }} ({{ $('Lead Webhook (HTTP)').item.json.body.email }})\nReason: Rejected by Sales Manager. Please update required info and re-assign if needed.",
+        "otherOptions": {}
+      },
+      "id": "39f5151c-4b96-4773-ba06-cb99010542a0",
+      "name": "Return to Sales Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3584,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=:memo: A lead requires manual follow-up: {{ $('Lead Webhook (HTTP)').item.json.body.name }}",
+        "otherOptions": {}
+      },
+      "id": "f3326062-275f-4bd9-956e-28f65f590e3a",
+      "name": "Notify Sales Team (Rejected)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3776,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "82dee698-9fb0-4541-85c3-ee51244c06c1",
+              "name": "Assigned Team",
+              "value": "Investment Team",
+              "type": "string"
+            },
+            {
+              "id": "324ec13e-4182-4275-bac9-9ff865316691",
+              "name": "Assigned Sales Person",
+              "value": "Sheikh Muhammad",
+              "type": "string"
+            },
+            {
+              "id": "9f6f8fe0-0f4e-4d91-a43d-92ca13c11749",
+              "name": "LeadStatus",
+              "value": "Approved",
+              "type": "string"
+            },
+            {
+              "id": "e3673d88-9fcc-4a9b-9909-c38cf624049a",
+              "name": "ApprovedAt",
+              "value": "={{ $now.toISO() }}",
+              "type": "string"
+            },
+            {
+              "id": "2e380db3-bac3-4122-81a1-7a8037c4234f",
+              "name": "Approved By",
+              "value": "Sales Manager",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "4ed5bcef-7281-44a9-8d8b-5219b34bacf7",
+      "name": "Assign Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3584,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $('Parse AI Draft').item.json.Subject }}",
+        "textContent": "={{ $('Parse AI Draft').item.json.EmailDraft }}",
+        "sender": "REPLACE_WITH_EMAIL_1@example.com",
+        "receipients": "={{ $('Parse AI Draft').item.json.Email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "8e4cd612-bb57-498e-aed2-401c89aecfcf",
+      "name": "Send Email (Brevo)",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        3776,
+        192
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "id": "76aad8cd-2b0c-4ca9-9bb7-d77bb93668aa",
+      "name": "Merge Comms",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        4032,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $('Validate Required Fields').item.json.body.Phone }}",
+        "template": "hello_world|en_US"
+      },
+      "id": "54b62f00-05a2-47e5-9204-92c326dc4833",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3776,
+        400
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t1",
+              "name": "EmailSent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "t2",
+              "name": "WhatsAppSent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "t3",
+              "name": "DeliveryStatus",
+              "value": "Delivered",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b4738bd-9e3b-4d2a-8f0f-c3b28d500206",
+      "name": "Track Delivery Status",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4224,
+        288
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nreturn items.map((item, index) => {\n  const input = item.json ?? {};\n\n  // Supports several possible OpenAI node output structures.\n  let raw =\n    input.output?.[0]?.content?.[0]?.text ??\n    input.output_text ??\n    input.text ??\n    input.message?.content ??\n    input.content?.[0]?.text ??\n    input.content ??\n    '{}';\n\n  // If the output is already an object, use it directly.\n  let parsed = {};\n\n  if (typeof raw === 'object' && raw !== null) {\n    parsed = raw;\n  } else {\n    const cleaned = String(raw)\n      .replace(/```json/gi, '')\n      .replace(/```/g, '')\n      .trim();\n\n    try {\n      parsed = JSON.parse(cleaned);\n    } catch (error) {\n      parsed = {};\n    }\n  }\n\n  const validPriority = ['High', 'Medium', 'Low'];\n  const validLeadType = ['Hot', 'Warm', 'Cold'];\n  const validSentiment = ['Positive', 'Neutral', 'Negative'];\n  const validROI = ['High', 'Medium', 'Low', 'Not Specified'];\n\n  const score = Number(parsed['AI Lead Score'] ?? parsed.AILeadScore ?? 0);\n\n  return {\n    json: {\n      ...input,\n\n      'AI Priority': validPriority.includes(\n        parsed['AI Priority'] ?? parsed.AIPriority\n      )\n        ? parsed['AI Priority'] ?? parsed.AIPriority\n        : 'Medium',\n\n      'AI Lead Score': Number.isFinite(score)\n        ? Math.min(100, Math.max(0, Math.round(score)))\n        : 0,\n\n      'AI Lead Type': validLeadType.includes(\n        parsed['AI Lead Type'] ?? parsed.AILeadType\n      )\n        ? parsed['AI Lead Type'] ?? parsed.AILeadType\n        : 'Warm',\n\n      Language:\n        parsed.Language ||\n        'English',\n\n      Sentiment: validSentiment.includes(parsed.Sentiment)\n        ? parsed.Sentiment\n        : 'Neutral',\n\n      'Assigned Team':\n        parsed['Assigned Team'] ||\n        parsed.AssignedTeam ||\n        'General Sales Team',\n\n      'Investment Type':\n        parsed['Investment Type'] ||\n        parsed.InvestmentType ||\n        'General Enquiry',\n\n      'Property Type':\n        parsed['Property Type'] ||\n        parsed.PropertyType ||\n        'Not Specified',\n\n      'ROI Interest': validROI.includes(\n        parsed['ROI Interest'] ?? parsed.ROIInterest\n      )\n        ? parsed['ROI Interest'] ?? parsed.ROIInterest\n        : 'Not Specified',\n    },\n\n    // Preserves the relationship with the corresponding input item.\n    pairedItem: { item: index },\n  };\n});"
+      },
+      "id": "fad0408d-ace7-4e38-be0e-5440e45cc064",
+      "name": "Parse AI Classification1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1696,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0688be50-9958-4e3e-993f-5e6f9bc1bb1e",
+              "name": "Lead ID",
+              "value": "={{ 'L-' + $now.toFormat('yyyyMMddHHmmssSSS') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1008,
+        272
+      ],
+      "id": "ed6ef8cc-be1e-47da-be39-b3f161f2718c",
+      "name": "Generate Lead ID"
+    },
+    {
+      "parameters": {
+        "amount": 1
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        1184,
+        272
+      ],
+      "id": "3841475a-2c49-4afb-b73d-e8c9a73c7f02",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "ca224d58-6640-4c2f-9f95-c065bee861d1",
+              "name": "Source",
+              "value": "Website",
+              "type": "string"
+            },
+            {
+              "id": "d78f41f6-4231-4886-a2ca-0d8e7e669b7c",
+              "name": "Platform",
+              "value": "WordPress",
+              "type": "string"
+            },
+            {
+              "id": "e81cc6f6-d2ba-4ad9-8671-155d9eba3176",
+              "name": "Campaign",
+              "value": "Website Inquiry",
+              "type": "string"
+            },
+            {
+              "id": "69392285-5563-4b63-818d-0ea7401ca6ef",
+              "name": "Website",
+              "value": "={{ $json.body['Page URL'] }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        64,
+        176
+      ],
+      "id": "d3136058-20a9-47a1-b189-871da4a71e22",
+      "name": "Set Source Information"
+    },
+    {
+      "parameters": {
+        "url": "http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "maxSize",
+              "value": "1"
+            },
+            {
+              "name": "select",
+              "value": "id,name,emailAddress,phoneNumber,status"
+            },
+            {
+              "name": "searchParams",
+              "value": "={{ JSON.stringify({\n  maxSize: 1,\n  where: [\n    {\n      type: \"or\",\n      value: [\n        {\n          type: \"equals\",\n          attribute: \"emailAddress\",\n          value: $('Lead Webhook (HTTP)').item.json.body.Email\n        },\n        {\n          type: \"equals\",\n          attribute: \"phoneNumber\",\n          value: (() => {\n            const p = String(\n              $('Lead Webhook (HTTP)').item.json.body.Phone || ''\n            ).replace(/[^0-9+]/g, '');\n\n            if (p.startsWith('+971')) return p;\n            if (p.startsWith('971')) return '+' + p;\n            if (p.startsWith('0')) return '+971' + p.substring(1);\n            if (p.startsWith('5')) return '+971' + p;\n\n            return p;\n          })()\n        }\n      ]\n    }\n  ]\n}) }}"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        592,
+        288
+      ],
+      "id": "ebddd1a0-b54d-4429-983e-0d80eaab33a6",
+      "name": "Search Existing Lead - EspoCRM"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"firstName\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Name || '' }}\",\n  \"lastName\": \"Website Lead\",\n  \"emailAddress\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Email || '' }}\",\n\n  \"phoneNumber\": \"{{ (() => { const p = String($('Lead Webhook (HTTP)').item.json.body.Phone || '').replace(/[^0-9+]/g, ''); if (p.startsWith('+971')) return p; if (p.startsWith('971')) return '+' + p; if (p.startsWith('0')) return '+971' + p.substring(1); if (p.startsWith('5')) return '+971' + p; return p; })() }}\",\n\n  \"status\": \"New\",\n  \"source\": \"Web Site\",\n\n  \"cCPlatform\": \"Website\",\n  \"cCWebsite\": \"{{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] || '' }}\",\n  \"cMessage\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Message || '' }}\",\n\n  \"cCBudget\": {{ Number($('Lead Webhook (HTTP)').item.json.body.Budget || 0) }},\n  \"cCAreaPreference\": \"{{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] || '' }}\",\n\n  \"cCAIPriority\": \"{{ $json['AI Priority'] || 'Not Classified' }}\",\n  \"cCAILeadScore\": {{ Number($json['AI Lead Score'] || 0) }},\n\n  \"cCAILeadType\": \"Not Classified\",\n\n  \"cCLanguage\": \"{{ $json['Language'] || 'Unknown' }}\",\n  \"cCSentiment\": \"{{ $json['Sentiment'] || 'Not Classified' }}\",\n\n  \"cCInvestmentType\": \"{{ $json['Investment Type'] === 'Pool Investment' ? 'Pooled Investment' : ($json['Investment Type'] || 'Not Specified') }}\",\n\n  \"cCPropertyType\": \"{{ $json['Property Type'] || 'Not Specified' }}\",\n  \"cCROIInterest\": \"{{ $json['ROI Interest'] || 'Not Specified' }}\",\n\n  \"cCAIIntent\": \"Not Classified\",\n  \"cCAISummary\": null,\n  \"cCAIConfidence\": null,\n  \"cCRecommendedAction\": \"Not Classified\",\n\n  \"cCApprovalStatus\": \"Pending\",\n  \"cCConversationStatus\": \"Not Started\",\n\n  \"cCReplyReceived\": false,\n  \"cCLastCustomerMessage\": null,\n\n  \"cCFollowUpCount\": 0,\n  \"cCFollowUpDate\": null,\n\n  \"cCCallbackRequested\": false,\n  \"cCCallbackDate\": null,\n\n  \"cCEmailSent\": false,\n  \"cCWhatsAppSent\": false,\n  \"cCCallCompleted\": false\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1920,
+        272
+      ],
+      "id": "2fe7ae9c-6f3d-42e4-88c3-6b49915542d9",
+      "name": "Create New Lead - EspoCRM"
+    },
+    {
+      "parameters": {
+        "method": "PATCH",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Search Existing Lead - EspoCRM').item.json.list[0].id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"firstName\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Name || '' }}\",\n  \"emailAddress\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Email || '' }}\",\n  \"phoneNumber\": \"{{ (() => { const p = String($('Lead Webhook (HTTP)').item.json.body.Phone || '').replace(/[^0-9+]/g, ''); if (p.startsWith('+971')) return p; if (p.startsWith('971')) return '+' + p; if (p.startsWith('0')) return '+971' + p.substring(1); if (p.startsWith('5')) return '+971' + p; return p; })() }}\",\n  \"cMessage\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Message || '' }}\",\n  \"cCPlatform\": \"Website\",\n  \"cCWebsite\": \"{{ $('Lead Webhook (HTTP)').item.json.body.Website || $('Lead Webhook (HTTP)').item.json.body['Page URL'] || '' }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1040,
+        80
+      ],
+      "id": "bbce4d98-308e-4318-a906-e1bf6ace94b9",
+      "name": "Update Existing Lead - EspoCRM"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "784081eb-a8dd-4f04-b3a3-14fadf2fe000",
+              "name": "Name",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body.Name || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "9abee6f0-9d0a-4e7d-880d-7c694376dba5",
+              "name": "Email",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body.Email || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "0a79af2d-11b2-4c4b-a6b4-e908943511ff",
+              "name": "Phone",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body.Phone || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "73728dd8-deb8-41cc-a66f-83fa7de85c50",
+              "name": "Message",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body.Message || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "02c307ef-9105-451e-ab2a-f1c7dd453b50",
+              "name": "Website",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "6a063e95-4e24-4dc0-bb83-bdc13e15bbf0",
+              "name": "Budget",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body.Budget || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "e24149a5-70dd-4c55-9e3c-83bcf6b265f3",
+              "name": "AreaPreference",
+              "value": "={{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "69ec5cbe-d395-4167-bf57-e0a54a9b5f6b",
+              "name": "AIPriority",
+              "value": "={{ $json.cCAIPriority || 'Not Classified' }}",
+              "type": "string"
+            },
+            {
+              "id": "9d0c1497-aa75-4522-9f59-a0ff5ebf5e32",
+              "name": "AILeadScore",
+              "value": "={{ $json.cCAILeadScore || 0 }}",
+              "type": "number"
+            },
+            {
+              "id": "c58a7993-3c47-489e-b464-122638c6e809",
+              "name": "AILeadType",
+              "value": "={{ $json.cCAILeadType || 'Not Classified' }}",
+              "type": "string"
+            },
+            {
+              "id": "53b8bd02-6320-4066-8c5f-8d5001fbf844",
+              "name": "Language",
+              "value": "={{ $json.cCLanguage || 'Unknown' }}",
+              "type": "string"
+            },
+            {
+              "id": "8b0b0106-e6b3-4d10-b82f-491c292e3690",
+              "name": "Sentiment",
+              "value": "={{ $json.cCSentiment || 'Not Classified' }}",
+              "type": "string"
+            },
+            {
+              "id": "0cf5d1d0-f047-4d26-b856-71fb06e70fa9",
+              "name": "InvestmentType",
+              "value": "={{ $json.cCInvestmentType || 'Not Specified' }}",
+              "type": "string"
+            },
+            {
+              "id": "09adb59c-ed4b-4559-a2ad-cf99a2aa7315",
+              "name": "PropertyType",
+              "value": "={{ $json.cCPropertyType || 'Not Specified' }}",
+              "type": "string"
+            },
+            {
+              "id": "7a1a6ef0-ee6e-41e0-a6c3-80092ac0428c",
+              "name": "ROIInterest",
+              "value": "={{ $json.cCROIInterest || 'Not Specified' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        2096,
+        80
+      ],
+      "id": "2e894239-977e-45a6-ba89-cd2787b49a09",
+      "name": "Prepare Draft Data"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"status\": \"Contacted\",\n  \"cCEmailSent\": {{ $('Track Delivery Status').item.json.EmailSent }},\n  \"cCWhatsAppSent\": {{ $('Track Delivery Status').item.json.WhatsAppSent }},\n  \"cCApprovalStatus\": \"Approved\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4656,
+        288
+      ],
+      "id": "301c8b41-bfbd-4732-8cc4-a51ee0e9804f",
+      "name": "EspoCRM Update Lead"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "41c4f2f6-3abf-4636-8e6a-c9233f2e9a92",
+              "name": "EspoCRMRecordId",
+              "value": "={{    $('Create New Lead - EspoCRM').isExecuted     ? $('Create New Lead - EspoCRM').item.json.id     : $('Search Existing Lead - EspoCRM').item.json.list[0].id }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        4448,
+        288
+      ],
+      "id": "77c6b99d-6d00-4ccc-8af9-c5d0afd47f96",
+      "name": "Prepare EspoCRM Record ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Note",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"post\": \"Lead contacted successfully by n8n automation.\\n\\nApproval Status: {{ $('Assign Lead').item.json.LeadStatus }}\\nApproved By: {{ $('Assign Lead').item.json['Approved By'] }}\\nAssigned Team: {{ $('Assign Lead').item.json['Assigned Team'] }}\\nAssigned Sales Person: {{ $('Assign Lead').item.json['Assigned Sales Person'] }}\\n\\nEmail Sent: {{ $('Track Delivery Status').item.json.EmailSent }}\\nWhatsApp Sent: {{ $('Track Delivery Status').item.json.WhatsAppSent }}\\nDelivery Status: {{ $('Track Delivery Status').item.json.DeliveryStatus }}\\n\\nAction Time: {{ $now.toISO() }}\",\n  \"parentType\": \"Lead\",\n  \"parentId\": \"{{ $('Prepare EspoCRM Record ID').item.json.EspoCRMRecordId }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        4880,
+        288
+      ],
+      "id": "0ff5957f-6b49-46d1-bd18-e997b9993027",
+      "name": "Create EspoCRM Activity Log"
+    },
+    {
+      "parameters": {
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Prepare EspoCRM Record ID').item.json.EspoCRMRecordId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {
+          "timeout": 10000
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5104,
+        288
+      ],
+      "id": "24239c30-97fd-4364-8251-f2b72bebe6cd",
+      "name": "Search Opportunity - EspoCRM"
+    },
+    {
+      "parameters": {
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/REPLACE_WITH_LEAD_RECORD_ID",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        6480,
+        16
+      ],
+      "id": "b54b9fb3-7a0e-47d5-98de-2fa2ab37afbe",
+      "name": "EspoCRM Update Lead1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "4501013a-abea-4240-9685-bf721db0df63",
+              "leftValue": "={{ $json.createdOpportunityId }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        5312,
+        288
+      ],
+      "id": "a859b01a-65a8-4381-b890-3888bdbdc355",
+      "name": "Opportunity Exists?"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Opportunity",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "=json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={{ ({\n  name: $json.name || `${$json.firstName || ''} ${$json.lastName || ''}`.trim() || 'New Property Opportunity',\n\n  stage: 'Prospecting',\n\n  amount: Number($json.cCBudget || $json.opportunityAmount || 1000000),\n\n  amountCurrency: 'AED',\n\n  closeDate: $now.plus({ days: 30 }).toFormat('yyyy-MM-dd'),\n\n  cAiLeadScore: Number($json.cCAILeadScore || 0),\n\n  cAiPriority: ['Low', 'Medium', 'High', 'Urgent'].includes($json.cCAIPriority)\n    ? $json.cCAIPriority\n    : 'Not Set',\n\n  cAiIntent: [\n    'High Intent',\n    'Interested',\n    'Requesting Information',\n    'Meeting Request',\n    'Callback Request',\n    'Lost',\n    'Not Interested',\n    'General Reply'\n  ].includes($json.cCAIIntent)\n    ? $json.cCAIIntent\n    : 'Not Set',\n\n  cInvestmentType: [\n    'Pooled Investment',\n    'Off-Plan Property',\n    'Joint Venture',\n    'Partnership',\n    'Bulk Investment',\n    'Property Investment',\n    'Other'\n  ].includes($json.cCInvestmentType)\n    ? $json.cCInvestmentType\n    : 'Not Set',\n\n  cPropertyType: [\n    'Apartment',\n    'Villa',\n    'Townhouse',\n    'Office',\n    'Retail',\n    'Land',\n    'Building',\n    'Bulk Units',\n    'Other'\n  ].includes($json.cCPropertyType)\n    ? $json.cCPropertyType\n    : 'Not Set',\n\n  cBudget: Number($json.cCBudget || 0),\n  cBudgetCurrency: 'AED',\n\n  cAreaPreference: $json.cCAreaPreference || '',\n\n  cRoiInterest: ['Low', 'Medium', 'High'].includes($json.cCROIInterest)\n    ? $json.cCROIInterest\n    : 'Not Set',\n\n  cApprovalStatus: ['Pending', 'Approved', 'Rejected'].includes($json.cCApprovalStatus)\n    ? $json.cCApprovalStatus\n    : 'Not Set',\n\n  cConversationStatus: [\n    'New',\n    'Contacted',\n    'Replied',\n    'Follow-up Required',\n    'Meeting Scheduled',\n    'Callback Scheduled',\n    'Closed'\n  ].includes($json.cCConversationStatus)\n    ? $json.cCConversationStatus\n    : 'Not Set',\n\n  cAiSummary: $json.cCAISummary || '',\n\n  cRecommendedAction: $json.cCRecommendedAction || '',\n\n  cLastCustomerMessage: $json.cCLastCustomerMessage || '',\n\n  cFollowUpDate: $json.cCFollowUpDate || null,\n\n  cFollowUpCount: Number($json.cCFollowUpCount || 0),\n\n  cReplyReceived: Boolean($json.cCReplyReceived),\n\n  cLastReplyDate: $json.cCLastReplyDate || null,\n\n  cLastContactMethod: [\n    'Email',\n    'WhatsApp',\n    'Phone Call',\n    'Meeting',\n    'SMS',\n    'Website Form',\n    'Other'\n  ].includes($json.cCLastContactMethod)\n    ? $json.cCLastContactMethod\n    : 'Not Set',\n\n  cEmailSent: Boolean($json.cCEmailSent),\n  cWhatsAppSent: Boolean($json.cCWhatsAppSent),\n\n  cCallbackRequested: Boolean($json.cCCallbackRequested),\n  cCallbackDateTime: $json.cCCallbackDate || null,\n\n  cMeetingRequested: Boolean($json.cCMeetingRequested),\n  cMeetingDateTime: $json.cCMeetingDate || null,\n\n  cCallCompleted: Boolean($json.cCCallCompleted),\n\n  cCallOutcome: [\n    'Interested',\n    'Follow-up Required',\n    'Meeting Requested',\n    'Callback Requested',\n    'No Answer',\n    'Busy',\n    'Not Interested',\n    'Wrong Number',\n    'Converted',\n    'Other'\n  ].includes($json.cCCallOutcome)\n    ? $json.cCCallOutcome\n    : 'Not Set',\n\n  cCallDuration: Number($json.cCCallDuration || 0),\n\n  cCallAttemptCount: Number($json.cCCallAttempt || 0),\n\n  cLastCallDate: $json.cCLastCallDate || null,\n\n  cAiCallStatus: [\n    'Successful',\n    'No Answer',\n    'Busy',\n    'Callback Required',\n    'Meeting Required',\n    'Follow-up Required',\n    'Not Interested',\n    'Failed'\n  ].includes($json.cCAICallStatus)\n    ? $json.cCAICallStatus\n    : 'Not Set',\n\n  cAiCallSummary: $json.cCAICallSummary || '',\n\n  cLastAiCallDate: $json.cCLastAICallDate || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5600,
+        432
+      ],
+      "id": "0ecf02c8-9e00-4a31-92aa-d57594269670",
+      "name": "Create Opportunity - EspoCRM"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Lead/{{ $('Search Opportunity - EspoCRM').item.json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"createdOpportunityId\": \"{{ $json.id }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5824,
+        432
+      ],
+      "id": "9d16abaf-82ae-49a5-901c-f89d9024a0fb",
+      "name": "Link Opportunity to Lead"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "=https://REPLACE_WITH_ESPOCRM_HOST.example.com/api/v1/Opportunity/{{ $json.createdOpportunityId }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Api-Key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ ({\n  cAiLeadScore: Number($json.cCAILeadScore || 0),\n\n  cAiPriority: ['Low', 'Medium', 'High', 'Urgent'].includes($json.cCAIPriority)\n    ? $json.cCAIPriority\n    : 'Not Set',\n\n  cAiIntent: [\n    'High Intent',\n    'Interested',\n    'Requesting Information',\n    'Meeting Request',\n    'Callback Request',\n    'Lost',\n    'Not Interested',\n    'General Reply'\n  ].includes($json.cCAIIntent)\n    ? $json.cCAIIntent\n    : 'Not Set',\n\n  cInvestmentType: [\n    'Pooled Investment',\n    'Off-Plan Property',\n    'Joint Venture',\n    'Partnership',\n    'Bulk Investment',\n    'Property Investment',\n    'Other'\n  ].includes($json.cCInvestmentType)\n    ? $json.cCInvestmentType\n    : 'Not Set',\n\n  cPropertyType: [\n    'Apartment',\n    'Villa',\n    'Townhouse',\n    'Office',\n    'Retail',\n    'Land',\n    'Building',\n    'Bulk Units',\n    'Other'\n  ].includes($json.cCPropertyType)\n    ? $json.cCPropertyType\n    : 'Not Set',\n\n  cBudget: Number($json.cCBudget || 0),\n  cBudgetCurrency: 'AED',\n\n  cAreaPreference: $json.cCAreaPreference || '',\n\n  cRoiInterest: ['Low', 'Medium', 'High'].includes($json.cCROIInterest)\n    ? $json.cCROIInterest\n    : 'Not Set',\n\n  cApprovalStatus: ['Pending', 'Approved', 'Rejected'].includes($json.cCApprovalStatus)\n    ? $json.cCApprovalStatus\n    : 'Not Set',\n\n  cConversationStatus: [\n    'New',\n    'Contacted',\n    'Replied',\n    'Follow-up Required',\n    'Meeting Scheduled',\n    'Callback Scheduled',\n    'Closed'\n  ].includes($json.cCConversationStatus)\n    ? $json.cCConversationStatus\n    : 'Not Set',\n\n  cAiSummary: $json.cCAISummary || '',\n\n  cRecommendedAction: $json.cCRecommendedAction || '',\n\n  cLastCustomerMessage: $json.cCLastCustomerMessage || '',\n\n  cFollowUpDate: $json.cCFollowUpDate || null,\n\n  cFollowUpCount: Number($json.cCFollowUpCount || 0),\n\n  cReplyReceived: Boolean($json.cCReplyReceived),\n\n  cLastReplyDate: $json.cCLastReplyDate || null,\n\n  cLastContactMethod: [\n    'Email',\n    'WhatsApp',\n    'Phone Call',\n    'Meeting',\n    'SMS',\n    'Website Form',\n    'Other'\n  ].includes($json.cCLastContactMethod)\n    ? $json.cCLastContactMethod\n    : 'Not Set',\n\n  cEmailSent: Boolean($json.cCEmailSent),\n\n  cWhatsAppSent: Boolean($json.cCWhatsAppSent),\n\n  cCallbackRequested: Boolean($json.cCCallbackRequested),\n\n  cCallbackDateTime: $json.cCCallbackDate || null,\n\n  cMeetingRequested: Boolean($json.cCMeetingRequested),\n\n  cMeetingDateTime: $json.cCMeetingDate || null,\n\n  cCallCompleted: Boolean($json.cCCallCompleted),\n\n  cCallOutcome: [\n    'Interested',\n    'Follow-up Required',\n    'Meeting Requested',\n    'Callback Requested',\n    'No Answer',\n    'Busy',\n    'Not Interested',\n    'Wrong Number',\n    'Converted',\n    'Other'\n  ].includes($json.cCCallOutcome)\n    ? $json.cCCallOutcome\n    : 'Not Set',\n\n  cCallDuration: Number($json.cCCallDuration || 0),\n\n  cCallAttemptCount: Number($json.cCCallAttempt || 0),\n\n  cLastCallDate: $json.cCLastCallDate || null,\n\n  cAiCallStatus: [\n    'Successful',\n    'No Answer',\n    'Busy',\n    'Callback Required',\n    'Meeting Required',\n    'Follow-up Required',\n    'Not Interested',\n    'Failed'\n  ].includes($json.cCAICallStatus)\n    ? $json.cCAICallStatus\n    : 'Not Set',\n\n  cAiCallSummary: $json.cCAICallSummary || '',\n\n  cLastAiCallDate: $json.cCLastAICallDate || null\n}) }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        5600,
+        192
+      ],
+      "id": "27d08e3d-a72f-48d3-8ab7-282615a20284",
+      "name": "Update Existing Opportunity - EspoCRM"
+    }
+  ],
+  "connections": {
+    "Lead Webhook (HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Set Source Information",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Search Existing Lead - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Found?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Lead - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Lead ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classify & Score Lead": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Classification1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Draft": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Draft": {
+      "main": [
+        [
+          {
+            "node": "Post Lead Summary (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Lead Summary (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Sales Manager Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Manager Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Assign Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return to Sales Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return to Sales Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team (Rejected)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Lead": {
+      "main": [
+        [
+          {
+            "node": "Send Email (Brevo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (Brevo)": {
+      "main": [
+        [
+          {
+            "node": "Merge Comms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Comms": {
+      "main": [
+        [
+          {
+            "node": "Track Delivery Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Merge Comms",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Track Delivery Status": {
+      "main": [
+        [
+          {
+            "node": "Prepare EspoCRM Record ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Classification1": {
+      "main": [
+        [
+          {
+            "node": "Create New Lead - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Generate Lead ID": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "AI Classify & Score Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Source Information": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Existing Lead - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Lead - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Prepare Draft Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Lead - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Prepare Draft Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Draft Data": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare EspoCRM Record ID": {
+      "main": [
+        [
+          {
+            "node": "EspoCRM Update Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Update Lead": {
+      "main": [
+        [
+          {
+            "node": "Create EspoCRM Activity Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create EspoCRM Activity Log": {
+      "main": [
+        [
+          {
+            "node": "Search Opportunity - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "EspoCRM Update Lead1": {
+      "main": [
+        []
+      ]
+    },
+    "Opportunity Exists?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Opportunity - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Opportunity - EspoCRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Opportunity - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Opportunity Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Opportunity - EspoCRM": {
+      "main": [
+        [
+          {
+            "node": "Link Opportunity to Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

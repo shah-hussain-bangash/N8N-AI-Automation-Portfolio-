@@ -1,0 +1,1351 @@
+{
+  "name": "Social Media Post Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            },
+            {
+              "triggerAtHour": 13
+            },
+            {
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2640,
+        80
+      ],
+      "id": "c34608a2-9fbb-421d-8874-9bddf1c5c750",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2464,
+        80
+      ],
+      "id": "44a810c4-0318-4e55-ab48-58d3d17c67d2",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a59fd6d9-6b22-430c-8da5-d0dfc4af17c3",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -2288,
+        80
+      ],
+      "id": "37f65100-8feb-4d35-87ee-1bbbe5826568",
+      "name": "Filter"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -2096,
+        80
+      ],
+      "id": "72320bd0-ee73-45a9-8b38-cfaef3c40cd4",
+      "name": "Limit"
+    },
+    {
+      "parameters": {
+        "person": "REPLACE_WITH_PERSON_1",
+        "text": "={{ $('Prepare Post Data').first().json.DraftText || $('Prepare Post Data').first().json.Caption }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {
+          "visibility": "PUBLIC"
+        }
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -352
+      ],
+      "id": "bc61bda4-4813-43f9-a117-2e4e8cb183fc",
+      "name": "Create a post"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Prepare LinkedIn Post').first().json.ID }}",
+            "Topic": "={{ $('Prepare LinkedIn Post').first().json.Topic }}",
+            "Category": "={{ $('Prepare LinkedIn Post').first().json.Category }}",
+            "Status": "Posted",
+            "Publish Date": "={{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "Generated Post": "={{ $('Prepare LinkedIn Post').first().json.GeneratedPost }}",
+            "LinkedIn URL": "={{ 'https://www.linkedin.com/feed/update/' + $('Create a post').first().json.urn + '/' }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Generated Post",
+              "displayName": "Generated Post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn URL",
+              "displayName": "LinkedIn URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -720,
+        -128
+      ],
+      "id": "6864eb7a-0a1b-4334-a2c5-50d355e82266",
+      "name": "Update row in sheet"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "dbc2b652-baa3-4cf5-b359-fe43f30ed74b",
+              "name": "Date",
+              "value": "={{ $json.Date }}",
+              "type": "string"
+            },
+            {
+              "id": "f4e5bb45-3e8e-4542-97a1-7180c4e1b25e",
+              "name": "ContentType",
+              "value": "={{ $json[\"Content-Type\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "1f6dc93f-9f9f-4b08-9253-46032164e04c",
+              "name": "ContentBrief",
+              "value": "={{ $json[\"Content-Brief\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "d511cc24-e935-47c8-a44f-3a72a587c53f",
+              "name": "CreativeType",
+              "value": "={{ $json[\"Creative-Type\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "3e0f57f9-3ab0-421d-b418-bcc508d66932",
+              "name": "MediaFileID",
+              "value": "={{ $json[\"Media File ID\"] }}",
+              "type": "string"
+            },
+            {
+              "id": "b9ec444c-8610-465c-ac26-202189e5754a",
+              "name": "Caption",
+              "value": "={{ $json.Caption }}",
+              "type": "string"
+            },
+            {
+              "id": "d3c01847-8060-487f-9e03-4aa2d3a50783",
+              "name": "DraftText",
+              "value": "={{ $json.Draft_text }}",
+              "type": "string"
+            },
+            {
+              "id": "5d9baf73-00ba-4b25-9ebe-0657ec9fde5b",
+              "name": "RowNumber",
+              "value": "={{ $json.row_number }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -1920,
+        80
+      ],
+      "id": "f6d59d18-3496-4e26-b879-95e2f29c4297",
+      "name": "Prepare Post Data"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "{{ $json.ContentType }}",
+                    "rightValue": "Image",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "218ecd31-8c97-4022-8567-f603233f34e9"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "2c9b453a-3709-4e12-81e9-404dad618737",
+                    "leftValue": "={{ $json.ContentType }}",
+                    "rightValue": "Video",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Video"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        -1728,
+        80
+      ],
+      "id": "e747a979-5d30-4eb3-8902-114727b91920",
+      "name": "Image or Video"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.MediaFileID }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1488,
+        0
+      ],
+      "id": "8325b9d6-959c-4749-b1de-b835f193e55f",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -1072,
+        -160
+      ],
+      "id": "35784b88-6f8d-43b8-b653-718f54a89ee2",
+      "name": "Facebook Graph API"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        32
+      ],
+      "id": "cc5eb20a-8d4d-4e1b-9c02-1a52b9341469",
+      "name": "Instagram - Create Media"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        32
+      ],
+      "id": "936e9462-cbea-4c81-8294-897b5bd56f9e",
+      "name": "Instagram - Publish Media"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.MediaFileID }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1488,
+        224
+      ],
+      "id": "a37765dd-3f48-4cfe-968d-cd35bbd4c6e3",
+      "name": "Download Video"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        240
+      ],
+      "id": "0b7c2cf5-1c73-4a5a-a4e8-c6a719439b69",
+      "name": "Instagram - Create Reel"
+    },
+    {
+      "parameters": {
+        "amount": 1,
+        "unit": "minutes"
+      },
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        -992,
+        240
+      ],
+      "id": "b1af08d0-3a90-4e4d-8821-59ca50411c60",
+      "name": "Wait"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        240
+      ],
+      "id": "adc48ebb-72e0-47b3-9d7c-a7f95e8163f7",
+      "name": "Instagram - Check Reel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "8ccb52ff-e794-4ca8-92e9-4f9f292e6cac",
+              "leftValue": "={{ $json.status_code }}",
+              "rightValue": "FINISHED",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -592,
+        240
+      ],
+      "id": "f5700e15-679e-4894-aacc-c4bf40cb970f",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -336,
+        224
+      ],
+      "id": "7534cad7-69d6-4626-a9b5-ba1110b38313",
+      "name": "Instagram - Publish Reel"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -1216,
+        464
+      ],
+      "id": "1d978f9d-9c07-4327-a42a-1c4205f7ecee",
+      "name": "Facebook - Start Reel"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -992,
+        464
+      ],
+      "id": "f1013951-cdb0-46c2-aa6f-e5e937d39b59",
+      "name": "Facebook - Upload Reel"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.facebookGraphApi",
+      "typeVersion": 1,
+      "position": [
+        -784,
+        464
+      ],
+      "id": "a5925c0b-ca5e-4fe4-8b93-c364c2f19a9b",
+      "name": "Facebook - Publish Reel"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "95bca22f-4ba4-4b15-8451-23ac93c74f5c",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -752,
+        848
+      ],
+      "id": "2684c5e4-e378-4b2e-bc48-a8f195beec4d",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "claude-sonnet-5",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are a professional LinkedIn content strategist and LinkedIn SEO writer.\n\nCreate one high-quality LinkedIn post based on the following topic:\n\nTopic: {{ $json.Topic }}\nCategory: {{ $json.Category }}\n\nBefore writing, silently identify:\n- The primary keyword/search phrase from the Topic.\n- 3–5 closely related semantic keywords.\n- The professional search intent behind the Topic.\n- Relevant industry concepts, entities, tools, technologies, and terminology that naturally support the subject.\n\nCORE WRITING REQUIREMENTS:\n\n- Write for a professional business audience.\n- Keep the post between 120 and 180 words.\n- Build the entire post around the meaning and search intent of the Topic.\n- Make the exact subject clear within the first 1–2 sentences.\n- Naturally include the primary keyword or a very close natural variation near the beginning.\n- Naturally incorporate 3–5 semantic/related keywords throughout the post.\n- Use synonyms and closely related terminology so LinkedIn can clearly understand the subject.\n- Never keyword-stuff.\n- Never repeat an exact keyword unnaturally for SEO.\n- Prioritize human readability and professional value over exact-match keyword usage.\n- Keep one clear central topic throughout the post.\n- Make the content informative, practical, specific, and engaging.\n- Include 2–4 useful insights, observations, strategies, lessons, or takeaways.\n- Explain WHY something matters, not only WHAT it is.\n- Use professional industry terminology naturally where appropriate.\n- Use short paragraphs for LinkedIn readability.\n- Avoid filler and unnecessary repetition.\n- Do not invent statistics, percentages, research, studies, news, case studies, trends, or facts.\n- Do not imply access to private research or proprietary data.\n- Avoid exaggerated or unsupported marketing claims.\n- Do not mention that the content was generated by AI.\n- Do not put the post inside quotation marks.\n- Do not use markdown headings such as # Heading.\n- Do not use markdown bold, tables, or code formatting.\n\nHOOK REQUIREMENTS:\n\nThe first 2–3 lines are especially important.\n\nThe opening should:\n- Immediately communicate the actual topic.\n- Naturally contain or strongly reference the main keyword.\n- Be specific rather than vague.\n- Provide curiosity, relevance, contrast, insight, or professional value.\n- Encourage the reader to continue.\n\nVary the hook naturally between:\n- a useful insight\n- an observation\n- a problem\n- a misconception\n- a practical lesson\n- a relevant question\n- a contrast\n- a strong but supportable professional point of view\n\nDo not start every post with a question.\n\nAvoid repeatedly starting posts with phrases such as:\n- \"Most companies...\"\n- \"Many businesses...\"\n- \"The future of...\"\n- \"In today's rapidly evolving world...\"\n- \"In today's digital landscape...\"\n\nCONTENT QUALITY & EXPERTISE:\n\n- Give the post one clear point of view, lesson, argument, or practical insight.\n- Prefer specific explanations over broad statements.\n- Demonstrate practical understanding through reasoning, implications, examples, or actionable advice.\n- Provide genuine professional value that someone may want to save, comment on, or share.\n- Avoid generic AI-style summaries when a more specific angle is possible.\n- Do not overuse dramatic one-line statements.\n- Do not overuse rhetorical questions.\n- Do not overuse em dashes.\n- Avoid unnecessary list-style writing unless a list genuinely improves clarity.\n\nAvoid generic AI phrases such as:\n- \"game-changer\"\n- \"revolutionizing the landscape\"\n- \"unlock the power\"\n- \"paradigm shift\"\n- \"transformative journey\"\nunless genuinely appropriate and necessary.\n\nSEARCH & DISCOVERABILITY:\n\nThe actual words, meaning, expertise, and topical relevance of the post are MORE IMPORTANT than hashtag volume.\n\nOptimize the content for:\n- LinkedIn search\n- topical discoverability\n- recommendation relevance\n- professional audience relevance\n- semantic understanding\n\nUse the primary keyword naturally near the beginning.\n\nUse related concepts naturally throughout the post.\n\nFor example:\n\nIf Topic relates to SEO, relevant concepts may include:\nsearch intent, organic visibility, content strategy, technical SEO,\nkeyword relevance, internal linking, search performance, user experience.\n\nIf Topic relates to AI Marketing, relevant concepts may include:\nAI marketing, personalization, marketing automation, customer data,\npredictive analytics, campaign optimization, content creation,\nhuman oversight, generative AI.\n\nIf Topic relates to Real Estate Investment, relevant concepts may include:\nproperty investment, ROI, rental yield, market demand,\ncapital appreciation, development, investor strategy, location.\n\nThese are examples only.\nAlways derive the actual semantic terms from the current Topic.\n\nLINKEDIN READABILITY:\n\n- Keep paragraphs generally 1–3 sentences long.\n- Use varied sentence lengths.\n- Avoid dense text blocks.\n- Make the post easy to scan on mobile.\n- Use emojis only when they genuinely improve readability.\n- Keep emojis minimal and professional.\n- Do not clutter the post with icons or decorative symbols.\n\nENGAGEMENT:\n\n- End with one thoughtful engagement question or light CTA directly related to the Topic.\n- Invite professional experience, examples, opinions, disagreement, or practical discussion.\n- Avoid generic endings such as \"What do you think?\" when a more specific question is possible.\n- Do not reuse the same CTA style repeatedly.\n\nHASHTAG STRATEGY:\n\nHashtags are supporting metadata, NOT the main SEO strategy.\n\nAdd 4–6 highly relevant LinkedIn hashtags at the very end.\n\nUse only as many hashtags as genuinely improve topical clarity and discoverability.\n\nAim for a balanced mix of:\n- broad industry hashtag\n- primary topic hashtag\n- closely related topic hashtag\n- niche/specialist hashtag\n- professional/business-intent hashtag\n- relevant supporting hashtag when useful\n\nHashtag rules:\n- Every hashtag must directly relate to the post.\n- Prefer hashtags professionals would realistically search, follow, or recognize.\n- Use readable CamelCase formatting.\n- Do not use random popular hashtags merely for reach.\n- Do not use #Viral, #Trending, #FYP, #FollowForFollow, or spam-style hashtags.\n- Do not use near-duplicate hashtags.\n- Do not automatically reuse the same hashtags on every post.\n- Keep all hashtags at the very end.\n- Never sacrifice post quality just to include another hashtag.\n\nCONTENT UNIQUENESS:\n\nBecause multiple LinkedIn posts may be created regularly:\n\n- Avoid repeating the same hook style.\n- Avoid repeating the same sentence structures.\n- Avoid repeating the same CTA.\n- Avoid repeatedly using the same examples or analogies.\n- Avoid making every post follow an identical numbered-list structure.\n- Give each post a distinct professional angle.\n- Make each post feel independently written rather than templated.\n\nFINAL QUALITY CHECK:\n\nBefore returning the post, silently verify:\n\n1. Is the exact topic clear from the first 1–2 sentences?\n2. Is the primary keyword naturally present near the beginning?\n3. Are 3–5 semantic keywords naturally incorporated?\n4. Does the post provide genuine professional value?\n5. Does the post have one clear central subject?\n6. Does the writing sound natural and human?\n7. Is any keyword being repeated only for SEO? If yes, rewrite it naturally.\n8. Are all claims supportable from the information provided?\n9. Are there any invented facts, statistics, studies, or trends? If yes, remove them.\n10. Would LinkedIn clearly understand the subject of the post?\n11. Does the post contain one clear professional insight or point of view?\n12. Does the hook avoid repetitive AI-style patterns?\n13. Is the CTA specific and meaningful?\n14. Are there 4–6 directly relevant hashtags?\n15. Are the hashtags supporting the content rather than carrying the SEO strategy?\n16. Would the post still be useful if all hashtags were removed?\n\nReturn ONLY the final LinkedIn post.\nNo explanation.\nNo SEO analysis.\nNo keyword list.\nNo notes."
+            }
+          ]
+        },
+        "options": {
+          "maxTokens": 4096
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.anthropic",
+      "typeVersion": 1,
+      "position": [
+        -2112,
+        848
+      ],
+      "id": "c4b3aeb9-dec5-431d-8f02-4d3d326a9a3a",
+      "name": "Message a model"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "REPLACE_WITH_CHATID_1",
+        "message": "=📢 LINKEDIN POST APPROVAL\n\n📝 Topic: {{ $('Prepare LinkedIn Post').first().json.Topic }}\n📂 Category: {{ $('Prepare LinkedIn Post').first().json.Category }}\n\n━━━━━━━━━━━━━━━━━━━━\n\n{{ $('Prepare LinkedIn Post').first().json.GeneratedPost }}\n\n━━━━━━━━━━━━━━━━━━━━\n\nPlease review this LinkedIn post together with the image above.\n\n✅ Approve = Publish to LinkedIn\n❌ Reject = Generate a new version",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "chatApproval": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -976,
+        848
+      ],
+      "id": "9aa029f5-6a1d-4824-9fc7-814e180b0949",
+      "name": "Send message and wait for response"
+    },
+    {
+      "parameters": {
+        "jsCode": "const ai = $input.first().json;\nconst source = $('Limit1').first().json;\n\n// Extract only Claude's final text response.\n// Ignore the \"thinking\" content.\nconst generatedPostRaw =\n  Array.isArray(ai.content)\n    ? ai.content.find(item => item.type === 'text')?.text || ''\n    : '';\n\n// Convert literal \\n into real line breaks\nconst generatedPost = generatedPostRaw\n  .replace(/\\\\n/g, '\\n')\n  .trim();\n\n// Stop workflow if Claude did not return the final post\nif (!generatedPost) {\n  throw new Error(\n    'Claude did not return a final LinkedIn post. Check the Message a model node output.'\n  );\n}\n\nreturn [\n  {\n    json: {\n      row_number: source.row_number,\n      ID: source.ID,\n      Topic: source.Topic,\n      Category: source.Category,\n      Status: source.Status,\n      PublishDate: source['Publish Date'] || '',\n      GeneratedPost: generatedPost,\n      LinkedInURL: source['LinkedIn URL'] || ''\n    }\n  }\n];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -1808,
+        848
+      ],
+      "id": "b0866509-3b12-4aff-aad0-2972d8184bd5",
+      "name": "Prepare LinkedIn Post"
+    },
+    {
+      "parameters": {
+        "operation": "sendPhoto",
+        "chatId": "REPLACE_WITH_CHATID_1",
+        "binaryData": true,
+        "additionalFields": {
+          "caption": "=🖼️ LINKEDIN IMAGE PREVIEW  Topic: {{ $('Prepare LinkedIn Post').first().json.Topic }}  Please review this image together with the LinkedIn post that will be sent next."
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        -1184,
+        848
+      ],
+      "id": "2ee0b378-bbb1-40ae-8466-0cbe010c4191",
+      "name": "Send a photo message"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "queryString": "={{ $('Prepare LinkedIn Post').first().json.Topic }}",
+        "limit": 1,
+        "filter": {
+          "folderId": {
+            "__rl": true,
+            "value": "REPLACE_WITH_FOLDERID_1",
+            "mode": "id"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1584,
+        848
+      ],
+      "id": "2fc54248-93cc-4237-a5d4-8b84fa274474",
+      "name": "Search files and folders",
+      "retryOnFail": true,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -1392,
+        848
+      ],
+      "id": "4553c5a6-7d5d-4998-bdb3-3607ed006d37",
+      "name": "Download file"
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Search files and folders').first().json.id }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        -528,
+        832
+      ],
+      "id": "31b091f3-7a74-4c41-bcbd-a683d7204f90",
+      "name": "Download Approved Image"
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 9
+            },
+            {
+              "triggerAtHour": 13
+            },
+            {
+              "triggerAtHour": 17
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -2832,
+        848
+      ],
+      "id": "f2cc01da-1e40-4d63-b2b7-061df73ea9e8",
+      "name": "Schedule Trigger1"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -2656,
+        848
+      ],
+      "id": "d14f4ade-dc8c-4318-bad8-1664ee5ba8c6",
+      "name": "Get row(s) in sheet1"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "a59fd6d9-6b22-430c-8da5-d0dfc4af17c3",
+              "leftValue": "={{ $json.Status }}",
+              "rightValue": "Pending",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        -2464,
+        848
+      ],
+      "id": "41d60dad-b0df-4835-b3bf-22c2d4fca5e7",
+      "name": "Filter1"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.limit",
+      "typeVersion": 1,
+      "position": [
+        -2272,
+        848
+      ],
+      "id": "e2e52c2d-bf75-4abd-99f8-8912a200a692",
+      "name": "Limit1"
+    },
+    {
+      "parameters": {
+        "person": "REPLACE_WITH_PERSON_1",
+        "text": "={{ $('Prepare LinkedIn Post').first().json.GeneratedPost }}",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {
+          "visibility": "PUBLIC"
+        }
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        -304,
+        832
+      ],
+      "id": "a7aab846-3267-4a0f-91ac-e591372b39cc",
+      "name": "Create a post1"
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "ID": "={{ $('Prepare LinkedIn Post').first().json.ID }}",
+            "Topic": "={{ $('Prepare LinkedIn Post').first().json.Topic }}",
+            "Category": "={{ $('Prepare LinkedIn Post').first().json.Category }}",
+            "Status": "Posted",
+            "Publish Date": "={{ $now.setZone('Asia/Dubai').toFormat('yyyy-MM-dd HH:mm:ss') }}",
+            "Generated Post": "={{ $('Prepare LinkedIn Post').first().json.GeneratedPost }}",
+            "LinkedIn URL": "={{ 'https://www.linkedin.com/feed/update/' + $('Create a post1').first().json.urn + '/' }}"
+          },
+          "matchingColumns": [
+            "ID"
+          ],
+          "schema": [
+            {
+              "id": "ID",
+              "displayName": "ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Topic",
+              "displayName": "Topic",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Category",
+              "displayName": "Category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Publish Date",
+              "displayName": "Publish Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Generated Post",
+              "displayName": "Generated Post",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LinkedIn URL",
+              "displayName": "LinkedIn URL",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -96,
+        832
+      ],
+      "id": "448b2051-e7d7-43d6-920e-7aa6e7c4cd29",
+      "name": "Update row in sheet1"
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        208,
+        816
+      ],
+      "id": "c2e3c37b-79e8-45ee-b0c1-e13ce378c562",
+      "name": "Telegram Trigger"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Filter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter": {
+      "main": [
+        [
+          {
+            "node": "Limit",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit": {
+      "main": [
+        [
+          {
+            "node": "Prepare Post Data",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare Post Data": {
+      "main": [
+        []
+      ]
+    },
+    "Image or Video": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "Facebook Graph API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Instagram - Create Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook Graph API": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram - Create Media": {
+      "main": [
+        [
+          {
+            "node": "Instagram - Publish Media",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram - Publish Media": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Instagram - Create Reel",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Facebook - Start Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram - Create Reel": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Instagram - Check Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Instagram - Check Reel": {
+      "main": [
+        [
+          {
+            "node": "If1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Instagram - Publish Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook - Start Reel": {
+      "main": [
+        [
+          {
+            "node": "Facebook - Upload Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Facebook - Upload Reel": {
+      "main": [
+        [
+          {
+            "node": "Facebook - Publish Reel",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update row in sheet": {
+      "main": [
+        []
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Download Approved Image",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Prepare LinkedIn Post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prepare LinkedIn Post": {
+      "main": [
+        [
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send a photo message": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Send a photo message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Approved Image": {
+      "main": [
+        [
+          {
+            "node": "Create a post1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger1": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet1": {
+      "main": [
+        [
+          {
+            "node": "Filter1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Filter1": {
+      "main": [
+        [
+          {
+            "node": "Limit1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Limit1": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create a post1": {
+      "main": [
+        [
+          {
+            "node": "Update row in sheet1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

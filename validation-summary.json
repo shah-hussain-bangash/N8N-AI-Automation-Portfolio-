@@ -177,5 +177,104 @@
     "source_configuration_placeholder_nodes": [],
     "sanitization_changes": 8,
     "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Website Uptime Monitor",
+    "nodes": 7,
+    "connections": 6,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 8,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "PageSpeed Performance Monitor",
+    "nodes": 7,
+    "connections": 6,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 8,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Keyword Ranking Collector",
+    "nodes": 7,
+    "connections": 6,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 8,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Master Traffic Orchestrator",
+    "nodes": 13,
+    "connections": 13,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 28,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "EspoCRM Lead Management",
+    "nodes": 34,
+    "connections": 34,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 60,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "EspoCRM Email Reply Management",
+    "nodes": 50,
+    "connections": 49,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 103,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Social Media Post Automation",
+    "nodes": 36,
+    "connections": 33,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 62,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "AI Outbound Call Agent",
+    "nodes": 8,
+    "connections": 9,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 15,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Multi-site Traffic Monitoring",
+    "nodes": 85,
+    "connections": 89,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 102,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
   }
 ]

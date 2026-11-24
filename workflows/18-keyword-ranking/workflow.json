@@ -1,0 +1,370 @@
+{
+  "name": "WF-08 Keyword Ranking",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Website_ID"
+            },
+            {
+              "name": "Domain"
+            },
+            {
+              "name": "Keyword"
+            }
+          ]
+        }
+      },
+      "id": "74f55aa4-9621-4fa0-a537-0e278e9265c8",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-kw",
+              "leftValue": "={{ $json.Keyword }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "9a2199d7-8e66-4d4c-be58-8ef68e8ab0ed",
+      "name": "Has Keyword?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "url": "https://serpapi.com/search",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "serpApi",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "engine",
+              "value": "google"
+            },
+            {
+              "name": "q",
+              "value": "={{ $json.Keyword }}"
+            },
+            {
+              "name": "num",
+              "value": "100"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          },
+          "timeout": 30000
+        }
+      },
+      "id": "eb923445-0254-4ada-8e90-2c3a8bd5529a",
+      "name": "SERP Search",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const websiteId = $('Execute Workflow Trigger').first().json.Website_ID || '';\nconst domain = $('Execute Workflow Trigger').first().json.Domain || '';\nconst keyword = $('Execute Workflow Trigger').first().json.Keyword || '';\n\nfunction norm(u) {\n  return String(u || '').toLowerCase().replace(/^https?:\\/\\//, '').replace(/^www\\./, '');\n}\nconst target = norm(domain);\n\nconst resp = $input.first() ? $input.first().json : {};\nconst results = Array.isArray(resp.organic_results) ? resp.organic_results : [];\n\nlet position = null;\nfor (const r of results) {\n  const link = norm(r.link || r.displayed_link || '');\n  if (target && link.includes(target)) {\n    position = r.position != null ? Number(r.position) : null;\n    break;\n  }\n}\n\nreturn [{\n  json: {\n    Website_ID: websiteId,\n    Domain: domain,\n    Keyword: keyword,\n    Date: $today.toISODate(),\n    Position: position,\n    Found: position != null,\n    ok: true,\n  },\n}];"
+      },
+      "id": "75c59628-7695-4245-aee2-ecf040c99e25",
+      "name": "Find Rank",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Keyword_Rankings"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Website_ID",
+            "Keyword",
+            "Date"
+          ],
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Domain": "={{ $json.Domain }}",
+            "Keyword": "={{ $json.Keyword }}",
+            "Date": "={{ $json.Date }}",
+            "Position": "={{ $json.Position }}",
+            "Found": "={{ $json.Found }}"
+          },
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Keyword",
+              "displayName": "Keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Position",
+              "displayName": "Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Found",
+              "displayName": "Found",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "boolean",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "fb29463c-e77e-4ef5-abb7-2dab6011395e",
+      "name": "Upsert Keyword_Rankings",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "Website_ID",
+              "value": "={{ $('Execute Workflow Trigger').first().json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "collector",
+              "value": "Keyword",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "s4",
+              "name": "position",
+              "value": "={{ $('Find Rank').first().json.Position }}",
+              "type": "string"
+            },
+            {
+              "id": "s5",
+              "name": "message",
+              "value": "Keyword ranking recorded",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "43b15205-1de7-4449-ab3c-aff1f1ee222e",
+      "name": "Status OK",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "Website_ID",
+              "value": "={{ $json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "collector",
+              "value": "Keyword",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e5",
+              "name": "message",
+              "value": "Skipped: missing Keyword",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "cb39a3e2-ac30-44f8-932a-6ba3bc5fc713",
+      "name": "Status Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has Keyword?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has Keyword?": {
+      "main": [
+        [
+          {
+            "node": "SERP Search",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "SERP Search": {
+      "main": [
+        [
+          {
+            "node": "Find Rank",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Rank": {
+      "main": [
+        [
+          {
+            "node": "Upsert Keyword_Rankings",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert Keyword_Rankings": {
+      "main": [
+        [
+          {
+            "node": "Status OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

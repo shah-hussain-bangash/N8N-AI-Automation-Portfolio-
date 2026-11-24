@@ -1,0 +1,651 @@
+{
+  "name": "WF-01 Master Traffic Orchestrator",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 6
+            }
+          ]
+        }
+      },
+      "id": "e6c2553e-bcdf-48a6-889c-c8a49201844a",
+      "name": "Daily 06:00 Asia/Dubai",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Websites"
+        },
+        "options": {}
+      },
+      "id": "a6f2e861-6ea7-4f96-91b8-4ab081d6ba63",
+      "name": "Read Websites Tab",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        224,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": false,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "active",
+              "leftValue": "={{ $json.Active }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "eff69e63-a38c-4c04-8507-c0c4f8935773",
+      "name": "Active = TRUE",
+      "type": "n8n-nodes-base.filter",
+      "typeVersion": 2.3,
+      "position": [
+        448,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "let combined = [];\ntry {\n  combined = $('Combine Website Status').all();\n} catch (e) {\n  combined = [];\n}\nconst rows = combined\n  .map((i) => i.json || {})\n  .filter((j) => Object.keys(j).length > 0 && j.Website_ID);\n\nconst total = rows.length;\nconst downSites = rows.filter((r) => r.uptime_status === 'Down');\nconst errorSites = rows.filter((r) => (r.collectors_error || 0) > 0);\n\nconst alerts = [];\nfor (const r of downSites) {\n  alerts.push({ Website_ID: r.Website_ID, Domain: r.Domain, type: 'Uptime', severity: 'Critical', message: 'Site is DOWN' });\n}\nfor (const r of errorSites) {\n  alerts.push({ Website_ID: r.Website_ID, Domain: r.Domain, type: 'Collector', severity: 'Warning', message: (r.collectors_error) + ' collector(s) reported an issue' });\n}\n\nreturn [{\n  json: {\n    run_at: $now.toISO(),\n    websites_processed: total,\n    sites_down: downSites.length,\n    sites_with_errors: errorSites.length,\n    errors_count: alerts.length,\n    status: total === 0 ? 'No active websites' : (alerts.length === 0 ? 'Healthy' : 'Issues detected'),\n    alerts: alerts,\n  },\n}];"
+      },
+      "id": "5994f60b-1ca2-40de-87ca-36941f4e8b9f",
+      "name": "KPI Engine",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        896,
+        0
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "Workflow_Log"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Run_At": "={{ $json.run_at }}",
+            "Websites_Processed": "={{ $json.websites_processed }}",
+            "Errors_Count": "={{ $json.errors_count }}",
+            "Status": "={{ $json.status }}"
+          },
+          "schema": [
+            {
+              "id": "Run_At",
+              "displayName": "Run_At",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Websites_Processed",
+              "displayName": "Websites_Processed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Errors_Count",
+              "displayName": "Errors_Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d8070177-4b64-43de-aa3b-06d1ddff259a",
+      "name": "Append Workflow_Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "={{ \"*Daily Website Traffic Summary* — \" + $json.run_at + \"\\n\" + \"Websites processed: \" + $json.websites_processed + \"\\n\" + \"Status: \" + $json.status + \"\\n\" + \"Sites down: \" + $json.sites_down + \" | With errors: \" + $json.sites_with_errors + ($json.errors_count > 0 ? (\"\\n\\n*Critical Alerts:*\\n\" + $json.alerts.map(a => \"• [\" + a.severity + \"] \" + a.Website_ID + \" (\" + a.Domain + \"): \" + a.message).join(\"\\n\")) : \"\\n\\nNo critical alerts.\") }}",
+        "otherOptions": {}
+      },
+      "id": "9319592e-afda-430e-a033-40b853b21f9d",
+      "name": "Daily Slack Summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.7,
+      "position": [
+        1344,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_WORKFLOWID_1"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Domain": "={{ $json.Domain }}",
+            "GA4_Property_ID": "={{ $json.GA4_Property_ID }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "GA4_Property_ID",
+              "displayName": "GA4_Property_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "c4e150d9-1a40-4882-9bf0-27d5d7be4882",
+      "name": "WF-02 GA4 Daily",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        896,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_WORKFLOWID_2"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $('Loop Over Websites').item.json.Website_ID }}",
+            "Domain": "={{ $('Loop Over Websites').item.json.Domain }}",
+            "GSC_Property": "={{ $('Loop Over Websites').item.json.GSC_Property }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "GSC_Property",
+              "displayName": "GSC_Property",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "e8186589-8b45-4663-8f21-9cd747febe73",
+      "name": "WF-04 GSC Daily",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_WORKFLOWID_3"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $('Loop Over Websites').item.json.Website_ID }}",
+            "Domain": "={{ $('Loop Over Websites').item.json.Domain }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "25bf4637-7d78-4eca-be5a-82894d0ab16d",
+      "name": "WF-06 Uptime",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_WORKFLOWID_4"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $('Loop Over Websites').item.json.Website_ID }}",
+            "Domain": "={{ $('Loop Over Websites').item.json.Domain }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "35731ae0-6991-4e4b-b0b1-7827ebe73ab1",
+      "name": "WF-07 PageSpeed",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1568,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_WORKFLOWID_5"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Website_ID": "={{ $('Loop Over Websites').item.json.Website_ID }}",
+            "Domain": "={{ $('Loop Over Websites').item.json.Domain }}",
+            "Keyword": "={{ $('Loop Over Websites').item.json.Keyword }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            },
+            {
+              "id": "Keyword",
+              "displayName": "Keyword",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string"
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {
+          "waitForSubWorkflow": true
+        }
+      },
+      "id": "44d0343f-03a2-45d1-88bd-ad25a9880ad8",
+      "name": "WF-08 Keyword",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.3,
+      "position": [
+        1792,
+        192
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const loopItems = $('Loop Over Websites').all();\nconst ga4 = $('WF-02 GA4 Daily').all();\nconst gsc = $('WF-04 GSC Daily').all();\nconst up = $('WF-06 Uptime').all();\nconst ps = $('WF-07 PageSpeed').all();\nconst kw = $('WF-08 Keyword').all();\n\nfunction pick(arr, i) {\n  return arr && arr[i] ? (arr[i].json || {}) : {};\n}\n\nconst out = [];\nfor (let i = 0; i < loopItems.length; i++) {\n  const site = loopItems[i].json || {};\n  const uptime = pick(up, i);\n  const results = {\n    ga4: pick(ga4, i),\n    gsc: pick(gsc, i),\n    uptime: uptime,\n    pagespeed: pick(ps, i),\n    keyword: pick(kw, i),\n  };\n  const collectors = [results.ga4, results.gsc, results.uptime, results.pagespeed, results.keyword];\n  const errors = collectors.filter((c) => c && c.ok === false).length;\n  out.push({\n    json: {\n      Website_ID: site.Website_ID || '',\n      Domain: site.Domain || '',\n      uptime_status: uptime.status || 'Unknown',\n      collectors_ok: collectors.filter((c) => c && c.ok === true).length,\n      collectors_error: errors,\n      keyword_position: results.keyword.position != null ? results.keyword.position : null,\n      details: results,\n    },\n  });\n}\n\nreturn out;"
+      },
+      "id": "cbc83d1a-348e-42f4-8f8e-84a1ebe383e7",
+      "name": "Combine Website Status",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2016,
+        272
+      ]
+    },
+    {
+      "parameters": {
+        "batchSize": 10,
+        "options": {}
+      },
+      "id": "c9982284-938c-43f5-9897-19d85fae2412",
+      "name": "Loop Over Websites",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        672,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Daily 06:00 Asia/Dubai": {
+      "main": [
+        [
+          {
+            "node": "Read Websites Tab",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Read Websites Tab": {
+      "main": [
+        [
+          {
+            "node": "Active = TRUE",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Active = TRUE": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Websites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "KPI Engine": {
+      "main": [
+        [
+          {
+            "node": "Append Workflow_Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append Workflow_Log": {
+      "main": [
+        [
+          {
+            "node": "Daily Slack Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-02 GA4 Daily": {
+      "main": [
+        [
+          {
+            "node": "WF-04 GSC Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-04 GSC Daily": {
+      "main": [
+        [
+          {
+            "node": "WF-06 Uptime",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-06 Uptime": {
+      "main": [
+        [
+          {
+            "node": "WF-07 PageSpeed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-07 PageSpeed": {
+      "main": [
+        [
+          {
+            "node": "WF-08 Keyword",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WF-08 Keyword": {
+      "main": [
+        [
+          {
+            "node": "Combine Website Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Website Status": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Websites",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Websites": {
+      "main": [
+        [
+          {
+            "node": "KPI Engine",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "WF-02 GA4 Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
