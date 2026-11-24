@@ -72,4 +72,19 @@ Integrations: Google Sheets, OpenAI, Slack, Brevo, WhatsApp Business, Power BI H
 
 ## Source
 
-Prepared from the owner-supplied export `Complete Lead Management Automation (Google Sheets CRM).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `Complete Lead Management Automation (Google Sheets CRM).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Lead approval and follow-up canvas — User-supplied workflow screenshot.** Partial historical canvas; unresolved configuration warnings remain visible in the supplied image.
+
+![Lead approval and follow-up canvas](../../docs/images/workflow-screenshots/lead-approval-and-follow-up.jpeg)
+
+Related visuals:
+
+- [Lead follow-up task canvas](../../docs/images/workflow-screenshots/lead-follow-up-tasks.jpeg) — User-supplied workflow screenshot. Partial historical canvas with a noOp stop node and configuration warnings; it is not a completed-runtime certificate.
+- [Lead intake and approval canvas](../../docs/images/workflow-screenshots/lead-intake-and-approval.jpeg) — User-supplied workflow screenshot. Partial historical canvas of intake, duplicate handling, drafting and approval; may differ from current exports.
+
+[Browse all 35 images](../../docs/GALLERY.md).

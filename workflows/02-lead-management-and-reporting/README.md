@@ -83,4 +83,19 @@ Integrations: Google Sheets, OpenAI, Slack, Brevo, WhatsApp Business, ElevenLabs
 
 ## Source
 
-Prepared from the owner-supplied export `Final Lead Management Automation With Power BI.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `Final Lead Management Automation With Power BI.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Lead intake and classification canvas — User-supplied workflow screenshot.** Partial historical workflow capture. Node layout and settings may differ from the current sanitized export; no runtime pass is inferred.
+
+![Lead intake and classification canvas](../../docs/images/workflow-screenshots/lead-intake-and-classification.jpeg)
+
+Related visuals:
+
+- [AI CRM dashboard overview](../../docs/images/dashboard-concepts/ai-crm-overview.jpeg) — Dashboard concept. Illustrative dashboard; visible contact records and metrics have not been established as synthetic or verified production data.
+- [Google Sheets to Power BI data flow](../../docs/images/lead-designs/sheets-to-power-bi-flow.png) — Design reference. Proposed push/synchronization flow, not proof of a live reporting connection.
+
+[Browse all 35 images](../../docs/GALLERY.md).

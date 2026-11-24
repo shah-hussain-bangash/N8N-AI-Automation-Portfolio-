@@ -118,4 +118,22 @@ Integrations: Google Search Console, Google Analytics Data/Admin APIs, Google Sh
 
 ## Source
 
-Prepared from the owner-supplied export `320 Websites Traffics Monitoring.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `320 Websites Traffics Monitoring.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Slack traffic report — overview — User-supplied report screenshot.** Historical report capture; visible statistics are not independently verified benchmark results.
+
+![Slack traffic report — overview](../../docs/images/traffic-reports/slack-report-overview.png)
+
+Related visuals:
+
+- [Slack traffic report — site comparison](../../docs/images/traffic-reports/slack-report-site-comparison.png) — User-supplied report screenshot. Historical report capture with website-level search and traffic metrics.
+- [Slack traffic report — ranking insights](../../docs/images/traffic-reports/slack-report-ranking-insights.png) — User-supplied report screenshot. Historical report capture with ranking attention and management insights.
+- [Website intelligence dashboard](../../docs/images/dashboard-concepts/website-intelligence-dashboard.png) — Dashboard concept. Illustrative reporting layout; numbers, coverage, live status and health indicators are not verified runtime measurements.
+- [Detailed SEO monitoring architecture](../../docs/images/traffic-designs/seo-monitoring-detailed.png) — Design reference. Proposed checks and integrations exceed the published collector scope; factor counts and safety claims are not independently verified.
+- [SEO monitoring overview](../../docs/images/traffic-designs/seo-monitoring-overview.png) — Design reference. Proposed read-only SEO analysis and reporting architecture.
+
+[Browse all 35 images](../../docs/GALLERY.md).

@@ -49,7 +49,7 @@ Integrations: Google Sheets, Five n8n collector subworkflows, Slack.
 
 ## Source
 
-Prepared from the owner-supplied export `WF-01 Master Traffic Orchestrator.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `WF-01 Master Traffic Orchestrator.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
 
 ## Collector import and mapping order
 
@@ -64,3 +64,23 @@ Import the collectors below, then import this orchestrator. In each Execute Work
 | WF-08 Keyword | [18: Keyword Ranking](../18-keyword-ranking/README.md) |
 
 Keep the orchestrator inactive until each collector has been configured and tested independently. The separate multi-site traffic monitoring project 24 is an alternative export, not an automatically connected dependency.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Sheets-based traffic architecture — Design reference.** Proposed controller and data flow; collector mapping for the actual published suite is documented in project 19.
+
+![Sheets-based traffic architecture](../../docs/images/traffic-designs/sheets-based-traffic-architecture.png)
+
+Related visuals:
+
+- [Google Sheets schema design](../../docs/images/traffic-designs/google-sheets-schema.png) — Design reference. Reference schema includes fields beyond those configured in the exports. Project configuration guides list the actual mapped columns.
+- [Traffic implementation overview](../../docs/images/traffic-designs/traffic-implementation-overview.png) — Design reference. Target implementation plan and expected outcomes, not a completed rollout record.
+- [Traffic implementation plan](../../docs/images/traffic-designs/traffic-implementation-plan.png) — Design reference. Target implementation plan with schedule and reporting concepts.
+- [Traffic rollout roadmap](../../docs/images/traffic-designs/traffic-rollout-roadmap.png) — Design reference. Phased rollout and dashboard planning reference.
+- [Traffic practical setup design](../../docs/images/traffic-designs/traffic-practical-setup.png) — Design reference. Proposed PostgreSQL/API setup. Masked credential examples are part of the supplied artwork, not usable credentials.
+- [PostgreSQL traffic architecture](../../docs/images/traffic-designs/postgresql-traffic-architecture.png) — Design reference. Alternative PostgreSQL-backed design. Published collectors use Google Sheets; this diagram does not establish a deployed database pipeline.
+- [Azure traffic reference architecture](../../docs/images/traffic-designs/azure-traffic-reference.png) — Design reference. Alternative Python/Azure/Power BI design; not an n8n workflow export or verified Azure deployment.
+
+[Browse all 35 images](../../docs/GALLERY.md).

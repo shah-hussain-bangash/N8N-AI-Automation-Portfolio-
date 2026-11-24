@@ -72,4 +72,19 @@ Integrations: Google Sheets, Anthropic, Telegram, Google Drive, LinkedIn, Facebo
 
 ## Source
 
-Prepared from the owner-supplied export `Social Media Post Automation.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `Social Media Post Automation.json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Approval-based social publishing — Design reference.** Conceptual generate-review-publish flow; verify rejection and regeneration behavior in the actual workflow.
+
+![Approval-based social publishing](../../docs/images/social-designs/approval-based-social-publishing.png)
+
+Related visuals:
+
+- [Social publishing text flow](../../docs/images/social-designs/social-publishing-text-flow.png) — Design reference. Text diagram of proposed approval and rejection paths.
+- [Multi-platform social publishing architecture](../../docs/images/social-designs/multi-platform-social-design.png) — Design reference. Proposed multi-site and multi-platform scope, not evidence that every platform is implemented or tested.
+
+[Browse all 35 images](../../docs/GALLERY.md).

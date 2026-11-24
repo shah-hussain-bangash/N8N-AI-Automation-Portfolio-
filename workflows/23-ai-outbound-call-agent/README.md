@@ -44,4 +44,14 @@ Integrations: Google Sheets, ElevenLabs conversational AI, Twilio phone integrat
 
 ## Source
 
-Prepared from the owner-supplied export `AI Outbound Call Agent (ElevenLabs + Twilio).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `AI Outbound Call Agent (ElevenLabs + Twilio).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Outbound AI call architecture — Design reference.** Includes proposed knowledge-base and logging capabilities beyond the eight-node export; verify actual implementation in project 23.
+
+![Outbound AI call architecture](../../docs/images/voice-designs/outbound-ai-call-design.jpeg)
+
+[Browse all 35 images](../../docs/GALLERY.md).

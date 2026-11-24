@@ -1,0 +1,352 @@
+[
+  {
+    "source_filename": "Fake Views Automation.png",
+    "path": "docs/images/traffic-designs/browser-monitoring-concept.png",
+    "title": "Browser-based monitoring concept",
+    "classification": "Design reference",
+    "caption": "Describes scheduled browser availability checks with regional proxies; no matching Browserless workflow export is established by this image.",
+    "bytes": 1875989,
+    "sha256": "8058c791c277ce202f54c96ea87fdada00db33cb1bec4108618997ecd4fdef1c",
+    "git_blob_sha": "637b007eb28650fc472557263df8cff6d63a372b"
+  },
+  {
+    "source_filename": "Traffics 1.png",
+    "path": "docs/images/traffic-reports/slack-report-overview.png",
+    "title": "Slack traffic report — overview",
+    "classification": "User-supplied report screenshot",
+    "caption": "Historical report capture; visible statistics are not independently verified benchmark results.",
+    "bytes": 387169,
+    "sha256": "16498877127e73c7edba56f1e5760f85481adce55ef5deed9772a3a51dc9d35e",
+    "git_blob_sha": "d9b9cbc85a0c987c02c6bcc10fabe55dbb168dd1"
+  },
+  {
+    "source_filename": "Traffics 2.png",
+    "path": "docs/images/traffic-reports/slack-report-site-comparison.png",
+    "title": "Slack traffic report — site comparison",
+    "classification": "User-supplied report screenshot",
+    "caption": "Historical report capture with website-level search and traffic metrics.",
+    "bytes": 461835,
+    "sha256": "8e4cf07f1a5ec06498ce9596270c24ddd4715ebc303a31196e85b6d2fd74bab0",
+    "git_blob_sha": "479f8aec1a77e6f7ecc4bd216e4ddf18149fff53"
+  },
+  {
+    "source_filename": "Traffics 3.png",
+    "path": "docs/images/traffic-reports/slack-report-ranking-insights.png",
+    "title": "Slack traffic report — ranking insights",
+    "classification": "User-supplied report screenshot",
+    "caption": "Historical report capture with ranking attention and management insights.",
+    "bytes": 455507,
+    "sha256": "995503ba7a266fa49d3d928103b0d7b5b269b81683c44cf0903bac254d3670b9",
+    "git_blob_sha": "c82a1587c5332f6886e7c90f7b214964dbc60a73"
+  },
+  {
+    "source_filename": "OutBound AI Call.jpeg",
+    "path": "docs/images/voice-designs/outbound-ai-call-design.jpeg",
+    "title": "Outbound AI call architecture",
+    "classification": "Design reference",
+    "caption": "Includes proposed knowledge-base and logging capabilities beyond the eight-node export; verify actual implementation in project 23.",
+    "bytes": 383414,
+    "sha256": "7e94f843f06a85c5abc4949af751cebf29ac8a652f0362292274b97b3618c65d",
+    "git_blob_sha": "da4d5cc62c7253c21b9f07ebeba52945281a8ed0"
+  },
+  {
+    "source_filename": "Odoo CRM Automation.png",
+    "path": "docs/images/lead-designs/odoo-crm-automation.png",
+    "title": "Odoo CRM automation architecture",
+    "classification": "Design reference",
+    "caption": "Broader target architecture; source adapters and Power BI reporting shown here are not all configured in the supplied exports.",
+    "bytes": 1869343,
+    "sha256": "82ed0863a185eb686f523c3999f317480ab62431281f682d19d1e9543a38444a",
+    "git_blob_sha": "b8eb1fc49e31ca4adaedd770a3f553e3e6e44260"
+  },
+  {
+    "source_filename": "Lead Management System.png",
+    "path": "docs/images/lead-designs/end-to-end-lead-management.png",
+    "title": "End-to-end lead management architecture",
+    "classification": "Design reference",
+    "caption": "Diagram completion, production-readiness and benefit claims are source artwork labels, not validated publication results.",
+    "bytes": 1858595,
+    "sha256": "2bb240961b8abb7eec055cc59a77a4b22de2894e3b12f760ff0642e7195a2322",
+    "git_blob_sha": "38412e54f36ecdd413ee3a2b159131c470e02d76"
+  },
+  {
+    "source_filename": "Social Media Automation Posts.png",
+    "path": "docs/images/social-designs/approval-based-social-publishing.png",
+    "title": "Approval-based social publishing",
+    "classification": "Design reference",
+    "caption": "Conceptual generate-review-publish flow; verify rejection and regeneration behavior in the actual workflow.",
+    "bytes": 1567299,
+    "sha256": "0807fb16acb6c11b73208783d7176379080178865d29094e885379342c394e30",
+    "git_blob_sha": "ec3e93668980d6dfb74e82e3621bd42b4711905e"
+  },
+  {
+    "source_filename": "workflow 3.png",
+    "path": "docs/images/social-designs/social-publishing-text-flow.png",
+    "title": "Social publishing text flow",
+    "classification": "Design reference",
+    "caption": "Text diagram of proposed approval and rejection paths.",
+    "bytes": 32576,
+    "sha256": "b854255dbfce557d48c9652944e1853c5bcede5105c7498636580d6db7eb1fdd",
+    "git_blob_sha": "106580ab4f3e5a65e696457928b83ebe29f0ebae"
+  },
+  {
+    "source_filename": "N8N Social Media Posts Design.png",
+    "path": "docs/images/social-designs/multi-platform-social-design.png",
+    "title": "Multi-platform social publishing architecture",
+    "classification": "Design reference",
+    "caption": "Proposed multi-site and multi-platform scope, not evidence that every platform is implemented or tested.",
+    "bytes": 1827190,
+    "sha256": "6c78838a59d4098ba04915b67210191c00ddd174bdf091d33bd449ca8eefe4e2",
+    "git_blob_sha": "cea522d15927504e3118724c40e0cb86bea2df50"
+  },
+  {
+    "source_filename": "Contenet Creation Automation.png",
+    "path": "docs/images/content-designs/wordpress-content-creation.png",
+    "title": "WordPress content creation architecture",
+    "classification": "Design reference",
+    "caption": "A separate content-creation concept; not an implemented capability claim for the Elementor builder exports.",
+    "bytes": 2135245,
+    "sha256": "261282a506deabc365b84ae26034fdd5ecef2392d6ce8fe43866cc49c5c20ecf",
+    "git_blob_sha": "2c786cb0cc4143bfea64a39e01fbface63fe7119"
+  },
+  {
+    "source_filename": "SEO Automation Workflow.png",
+    "path": "docs/images/traffic-designs/seo-monitoring-detailed.png",
+    "title": "Detailed SEO monitoring architecture",
+    "classification": "Design reference",
+    "caption": "Proposed checks and integrations exceed the published collector scope; factor counts and safety claims are not independently verified.",
+    "bytes": 2211381,
+    "sha256": "596317b21bf856b28397b21513d0e3fc3ed31b3af06580e1da37c7739444c07a",
+    "git_blob_sha": "d77977791d9cfae49c9b80d89b723fe7d3cb46fd"
+  },
+  {
+    "source_filename": "SEO Automation Workflow 2.png",
+    "path": "docs/images/traffic-designs/seo-monitoring-overview.png",
+    "title": "SEO monitoring overview",
+    "classification": "Design reference",
+    "caption": "Proposed read-only SEO analysis and reporting architecture.",
+    "bytes": 1989050,
+    "sha256": "39be716fca65b36b55471dd4cf49b79afa7104ecb799238cae62864ec8ae24c0",
+    "git_blob_sha": "e1f2910f2dcf8352580fcd547c62bd679e9d200c"
+  },
+  {
+    "source_filename": "Power BI Deshboard.png",
+    "path": "docs/images/dashboard-concepts/website-intelligence-dashboard.png",
+    "title": "Website intelligence dashboard",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative reporting layout; numbers, coverage, live status and health indicators are not verified runtime measurements.",
+    "bytes": 1572901,
+    "sha256": "1d89f8b4722a10e515e1817db660006f675dac5222a0eb84ad9b2352fc5434e1",
+    "git_blob_sha": "8604058f13b4699ff73e1060e0adbe813482b817"
+  },
+  {
+    "source_filename": "Google Sheets Fields.png",
+    "path": "docs/images/traffic-designs/google-sheets-schema.png",
+    "title": "Google Sheets schema design",
+    "classification": "Design reference",
+    "caption": "Reference schema includes fields beyond those configured in the exports. Project configuration guides list the actual mapped columns.",
+    "bytes": 1721721,
+    "sha256": "d8b98553f096cc90cae0ce3f918ebfc5abb9d7499defc837c82d8c0a319fdbbb",
+    "git_blob_sha": "9b658e4c9ee7a847124dcf74b9ba24958adff2ac"
+  },
+  {
+    "source_filename": "N8N Google Sheets.png",
+    "path": "docs/images/traffic-designs/sheets-based-traffic-architecture.png",
+    "title": "Sheets-based traffic architecture",
+    "classification": "Design reference",
+    "caption": "Proposed controller and data flow; collector mapping for the actual published suite is documented in project 19.",
+    "bytes": 1808280,
+    "sha256": "2266a3bf86fea947dac4ad26e8510246e2b4c80fdb256dc6a738977594dbaa55",
+    "git_blob_sha": "f2eb147cc1e9d37b248c1fba4f9d6d3ea666f71d"
+  },
+  {
+    "source_filename": "N8N WorkFlow.png",
+    "path": "docs/images/traffic-designs/postgresql-traffic-architecture.png",
+    "title": "PostgreSQL traffic architecture",
+    "classification": "Design reference",
+    "caption": "Alternative PostgreSQL-backed design. Published collectors use Google Sheets; this diagram does not establish a deployed database pipeline.",
+    "bytes": 1635168,
+    "sha256": "865856e0a801ee6bc6fe03d200fc1fbf7a06814d6a4cdd5528d27944d94e7dcb",
+    "git_blob_sha": "57b30d067f9842a5853571ebdab67f4df57a450b"
+  },
+  {
+    "source_filename": "Complete Overview.png",
+    "path": "docs/images/traffic-designs/traffic-implementation-overview.png",
+    "title": "Traffic implementation overview",
+    "classification": "Design reference",
+    "caption": "Target implementation plan and expected outcomes, not a completed rollout record.",
+    "bytes": 1662467,
+    "sha256": "a2daa8349ff3ae61b3f3486f1b2d4228203c9d936ff76dd3572fb1a271fd1bf5",
+    "git_blob_sha": "9837cd133b5c55681b3d40006e21273501187519"
+  },
+  {
+    "source_filename": "workflow 4.png",
+    "path": "docs/images/traffic-designs/traffic-implementation-plan.png",
+    "title": "Traffic implementation plan",
+    "classification": "Design reference",
+    "caption": "Target implementation plan with schedule and reporting concepts.",
+    "bytes": 1836490,
+    "sha256": "f1dab286d52ff6138af486507855c302f4079a482fdc6b20b4591484efe8a17a",
+    "git_blob_sha": "5880410e379adf50fa46b12bb9b22740816d353a"
+  },
+  {
+    "source_filename": "WorkFlow 5.png",
+    "path": "docs/images/traffic-designs/traffic-rollout-roadmap.png",
+    "title": "Traffic rollout roadmap",
+    "classification": "Design reference",
+    "caption": "Phased rollout and dashboard planning reference.",
+    "bytes": 1591713,
+    "sha256": "f807667bf2d82c6db79cebd20e393e6e53626ac8539d3ef606e4b2b1612d2268",
+    "git_blob_sha": "c9f6015088975f7116da05155f9e3859c938b4e9"
+  },
+  {
+    "source_filename": "WorkFlow 6.png",
+    "path": "docs/images/traffic-designs/traffic-practical-setup.png",
+    "title": "Traffic practical setup design",
+    "classification": "Design reference",
+    "caption": "Proposed PostgreSQL/API setup. Masked credential examples are part of the supplied artwork, not usable credentials.",
+    "bytes": 1782614,
+    "sha256": "d50e9f7e5e52411b5c64d4b4dcdc0db440947c8a9b4b1aeb5f051b86dbf65592",
+    "git_blob_sha": "a1affdadd0afa2fb5d06fbb36708fe8f96ca1a6f"
+  },
+  {
+    "source_filename": "WorkFLow 7.png",
+    "path": "docs/images/traffic-designs/azure-traffic-reference.png",
+    "title": "Azure traffic reference architecture",
+    "classification": "Design reference",
+    "caption": "Alternative Python/Azure/Power BI design; not an n8n workflow export or verified Azure deployment.",
+    "bytes": 1716463,
+    "sha256": "8a0460addc60269fe2d3184b16c60052a69b65870242bceb83d0d6e683c3c86c",
+    "git_blob_sha": "0406c1eafa8a72759c0f0c2953190887626d76e3"
+  },
+  {
+    "source_filename": "AI Agent Development Strategies.png",
+    "path": "docs/images/agent-designs/real-estate-agent-roadmap.png",
+    "title": "Real estate agent development roadmap",
+    "classification": "Design reference",
+    "caption": "Strategy, development and deployment phases for a proposed broader agent system.",
+    "bytes": 1677221,
+    "sha256": "a6dc0f028dba0c163c7adfe98bd0741985402cc09b3c2358342978be7945d0d2",
+    "git_blob_sha": "28fb1720a8aed8b6dcd2776baf07ded12e132e31"
+  },
+  {
+    "source_filename": "WorkFlow.png",
+    "path": "docs/images/lead-designs/supabase-lead-management.png",
+    "title": "Supabase lead management architecture",
+    "classification": "Design reference",
+    "caption": "Alternative Supabase/PostgreSQL design; not evidence of a deployed dashboard or database implementation in this repository.",
+    "bytes": 1991149,
+    "sha256": "2fb2e9fc0d93f52c01e6aa2c0daf3bcba798003016bad3a226a3839120a4234b",
+    "git_blob_sha": "91897bf44622433f378a866f7c660b5c75f8a6b3"
+  },
+  {
+    "source_filename": "WorkFlow 8.jpeg",
+    "path": "docs/images/workflow-screenshots/lead-intake-and-classification.jpeg",
+    "title": "Lead intake and classification canvas",
+    "classification": "User-supplied workflow screenshot",
+    "caption": "Partial historical workflow capture. Node layout and settings may differ from the current sanitized export; no runtime pass is inferred.",
+    "bytes": 77816,
+    "sha256": "87e84dfe6b245f8dcb7a7da99148450a7d830132d4c107a76321022a2cc47a83",
+    "git_blob_sha": "8ca5ed01f25f7a15b4e268f5b3dd9e75f470efe3"
+  },
+  {
+    "source_filename": "Property Recommendation Systems.png",
+    "path": "docs/images/agent-designs/property-recommendation-system.png",
+    "title": "Property recommendation architecture",
+    "classification": "Design reference",
+    "caption": "Proposed recommendation, follow-up and reporting capabilities; percentage and benefit claims are not validated measurements.",
+    "bytes": 1535756,
+    "sha256": "a896dc4bb7e9239bedb2aa38b37335ab13666ac5e4a9fa58f49cba2bf78b07be",
+    "git_blob_sha": "29fc2f948a95ea6e9b32cc4b862e82f7e8bf2114"
+  },
+  {
+    "source_filename": "WorkFlow 9.jpeg",
+    "path": "docs/images/dashboard-concepts/ai-crm-overview.jpeg",
+    "title": "AI CRM dashboard overview",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative dashboard; visible contact records and metrics have not been established as synthetic or verified production data.",
+    "bytes": 350537,
+    "sha256": "38a82e791f0c075ca956f1730c40ec7519b47307845401126b7f5ccac7b14a2e",
+    "git_blob_sha": "1100dacb886ad86c03f08749d8fb5b453c80efd1"
+  },
+  {
+    "source_filename": "workflow 2.png",
+    "path": "docs/images/lead-designs/sheets-to-power-bi-flow.png",
+    "title": "Google Sheets to Power BI data flow",
+    "classification": "Design reference",
+    "caption": "Proposed push/synchronization flow, not proof of a live reporting connection.",
+    "bytes": 1527365,
+    "sha256": "646b0ceca92d7f3a6a8f70e27fd93e4414653b5a4b60e53b5076777ce428d6cc",
+    "git_blob_sha": "02019095886259f7cf3575067c8c7a5e4671d4da"
+  },
+  {
+    "source_filename": "Deshboard 1.jpeg",
+    "path": "docs/images/dashboard-concepts/ai-crm-green.jpeg",
+    "title": "AI CRM green dashboard",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative dashboard with sample-looking contact rows; no production-result claim is made.",
+    "bytes": 348478,
+    "sha256": "4ae90a698268642778cfb193c9913038e912ae30f9ac316462057692173ba136",
+    "git_blob_sha": "b58710a17d2e5fe4ede3736f3664b66f0a98f7e5"
+  },
+  {
+    "source_filename": "Deshboard 2.png",
+    "path": "docs/images/dashboard-concepts/lead-automation-executive.png",
+    "title": "Lead automation executive dashboard",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative reporting layout; production, live-data and automation-health labels are source artwork, not independently verified status.",
+    "bytes": 1841684,
+    "sha256": "e3e9bf0e6c444b953888728c54458c291e35e9835bc7a64cef90bcf1a459659d",
+    "git_blob_sha": "151dc5ef39b3e423c213e6a68d41c0c683a113ad"
+  },
+  {
+    "source_filename": "Deshboard 3.jpg",
+    "path": "docs/images/dashboard-concepts/lead-analytics-light.jpg",
+    "title": "Lead analytics light dashboard",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative lead analytics layout; visible personal/contact fields are retained from the supplied artwork.",
+    "bytes": 298125,
+    "sha256": "70f4f229401c02136aed2a479e17822ebc314c3e07aadb09ceb09c89be87e979",
+    "git_blob_sha": "716fa04028cd793235e5ab5044b1c0ee143c63d1"
+  },
+  {
+    "source_filename": "Deshboard 4.png",
+    "path": "docs/images/dashboard-concepts/lead-management-dark.png",
+    "title": "Lead management dark dashboard",
+    "classification": "Dashboard concept",
+    "caption": "Illustrative reporting layout; reported conversion, health and live indicators are not benchmark evidence.",
+    "bytes": 1752039,
+    "sha256": "125114c762f5bc7304f75789ad664b54754d4926a947dceff3aede32499ccc72",
+    "git_blob_sha": "e3538bd9b19f774753fc7b51422ccb0fe6e647e4"
+  },
+  {
+    "source_filename": "WOrkFlow 10.jpeg",
+    "path": "docs/images/workflow-screenshots/lead-follow-up-tasks.jpeg",
+    "title": "Lead follow-up task canvas",
+    "classification": "User-supplied workflow screenshot",
+    "caption": "Partial historical canvas with a noOp stop node and configuration warnings; it is not a completed-runtime certificate.",
+    "bytes": 14384,
+    "sha256": "8c74aeeb1459a1039e1193157a02e0af9947b1b00300be62629a448281a0e5e0",
+    "git_blob_sha": "2eb73e52ddeedda75a1f52790071134278c0e2fd"
+  },
+  {
+    "source_filename": "WOrkFlow 11.jpeg",
+    "path": "docs/images/workflow-screenshots/lead-approval-and-follow-up.jpeg",
+    "title": "Lead approval and follow-up canvas",
+    "classification": "User-supplied workflow screenshot",
+    "caption": "Partial historical canvas; unresolved configuration warnings remain visible in the supplied image.",
+    "bytes": 86931,
+    "sha256": "1c34de30dc07c8caf667a91d0b6f1403403141580fd0a434cf12802fea34e726",
+    "git_blob_sha": "e08e67c06096484707c8339a0c676b66215779b7"
+  },
+  {
+    "source_filename": "WhatsApp Image 2026-08-05 at 12.59.10 PM.jpeg",
+    "path": "docs/images/workflow-screenshots/lead-intake-and-approval.jpeg",
+    "title": "Lead intake and approval canvas",
+    "classification": "User-supplied workflow screenshot",
+    "caption": "Partial historical canvas of intake, duplicate handling, drafting and approval; may differ from current exports.",
+    "bytes": 75603,
+    "sha256": "e0a47ab67aa3a21a938a1ce4352ae65a6f87e21149221f4a2dcb4c8bd80208e9",
+    "git_blob_sha": "da0f3c9abe533a8ab86aa13102d7bf68c54ad562"
+  }
+]

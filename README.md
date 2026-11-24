@@ -2,6 +2,14 @@
 
 A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns, video generation, WordPress/Elementor building and social publishing, conversational agents and analytics collection. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
 
+## Visual gallery
+
+Browse [35 architecture diagrams, dashboard concepts and historical screenshots](docs/GALLERY.md), grouped by topic and linked to relevant projects. Diagrams and dashboard concepts illustrate designs; their embedded performance, coverage and completion claims are not independently verified.
+
+[![Outbound AI call architecture — design reference](docs/images/voice-designs/outbound-ai-call-design.jpeg)](docs/GALLERY.md)
+
+*Design reference for the voice-call project; some depicted capabilities extend beyond the supplied workflow export.*
+
 ## Projects
 
 | Order | Project | Workflow | Nodes |

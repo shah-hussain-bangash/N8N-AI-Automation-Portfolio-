@@ -69,4 +69,18 @@ Integrations: Odoo, OpenAI, Slack, Brevo, WhatsApp Business, Power BI HTTP endpo
 
 ## Source
 
-Prepared from the owner-supplied export `Real Estate Lead Management (AI).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No production performance metrics or screenshots are claimed.
+Prepared from the owner-supplied export `Real Estate Lead Management (AI).json`. Existing in-workflow attribution and public reference links are retained where present; no sole-authorship claim is made for third-party templates or nodes. No independently verified production performance metrics are claimed. User-supplied visual references are identified below.
+
+## Visual references
+
+These owner-supplied visuals are documentation references. Historical canvases may differ from the current export. Diagrams and dashboard concepts are not runtime validation or evidence that all depicted features are implemented.
+
+**Odoo CRM automation architecture — Design reference.** Broader target architecture; source adapters and Power BI reporting shown here are not all configured in the supplied exports.
+
+![Odoo CRM automation architecture](../../docs/images/lead-designs/odoo-crm-automation.png)
+
+Related visuals:
+
+- [End-to-end lead management architecture](../../docs/images/lead-designs/end-to-end-lead-management.png) — Design reference. Diagram completion, production-readiness and benefit claims are source artwork labels, not validated publication results.
+
+[Browse all 35 images](../../docs/GALLERY.md).
