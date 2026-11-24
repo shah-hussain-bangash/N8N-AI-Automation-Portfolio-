@@ -1,0 +1,16 @@
+{
+  "workflow": "AI Real Estate Lead Management",
+  "nodes": 37,
+  "connections": 36,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [
+    "Attach Brochure / Project Details",
+    "Send Brevo Email (Approved Template)",
+    "Send Data to Power BI",
+    "Send Follow-up Email (If No Response)"
+  ],
+  "sanitization_changes": 36,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

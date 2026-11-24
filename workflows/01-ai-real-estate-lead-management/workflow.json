@@ -1,0 +1,1313 @@
+{
+  "name": "Real Estate Lead Management (AI)",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## 1. Lead Sources\nWordPress Forms, Facebook Leads, Bayut Leads, Property Finder Leads all POST to the Lead Webhook. Manual Entry uses the backend Form Trigger."
+      },
+      "id": "026ab2ff-476d-4d83-b6ac-3e9ee9db0c51",
+      "name": "Sticky Note 026ab2ff",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 8. Data & Reporting\nStore Lead Data (Summary) -> Send Data to Power BI streaming dataset.\nPower BI Dashboard tracks: Total Leads, Lead Sources, Conversion Rate, AI Classification, Sales Performance, ROI."
+      },
+      "id": "a6d2f48d-46d0-462b-94b1-32fb5f91174c",
+      "name": "Sticky Note a6d2f48d",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        3248,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "real-estate-lead",
+        "options": {}
+      },
+      "id": "34c1925b-b854-4446-989f-99b2324312fb",
+      "name": "Lead Webhook (HTTP)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-name",
+              "leftValue": "={{ $json.body.name || $json[\"Full Name\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "has-email",
+              "leftValue": "={{ $json.body.email || $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "540acc67-0ef8-4a49-902e-7f119c5802bd",
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "limit": 1,
+        "filters": {
+          "filter": [
+            {
+              "fieldName": "email_from",
+              "value": "={{ $json.body.email || $json.Email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "244ae1a6-e8f0-41a7-b257-aec6167da48c",
+      "name": "Duplicate Lead Check (Odoo)",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        448,
+        192
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dup",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "8fdb2f48-827f-44ea-9b34-7c6eb2f6cfd9",
+      "name": "Duplicate Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "phone": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.phone }}",
+            "description": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.message }}"
+          }
+        }
+      },
+      "id": "fc436879-e232-4ef7-a59d-17ba78fd384e",
+      "name": "Update Existing Lead in Odoo",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        896,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a real estate lead qualification AI. Classify the lead and return strict JSON with keys: lead_type, budget, investment_interest, priority, area_preference, sentiment, recommended_sales_team."
+            },
+            {
+              "content": "=Lead data:\nName: {{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}\nEmail: {{ $(\"Lead Webhook (HTTP)\").item.json.body.email }}\nBudget: {{ $(\"Lead Webhook (HTTP)\").item.json.body.budget }}\nArea: {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }}\nMessage: {{ $(\"Lead Webhook (HTTP)\").item.json.body.message }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "2a50f4c3-95bd-473f-af6b-f31c5d2731d5",
+      "name": "AI Classification (OpenAI / GPT)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1104,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "create",
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ ($(\"Lead Webhook (HTTP)\").item.json.body.name || $json[\"Full Name\"]) + \" - Real Estate Lead\" }}",
+            "contact_name": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}",
+            "email_from": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.email }}",
+            "phone": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.phone }}",
+            "description": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.message }}"
+          }
+        }
+      },
+      "id": "81c01d60-597b-405a-be9b-9ba21453d4af",
+      "name": "Create New Lead in Odoo",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        896,
+        288
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "8966ab9c-165a-4d44-88dd-43657375deb1",
+      "name": "Invalid Lead - Missing Fields",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        448,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "formTitle": "Manual Lead Entry",
+        "formDescription": "Sales team backend lead entry form",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Full Name",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Email",
+              "fieldType": "email",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Phone",
+              "requiredField": true
+            },
+            {
+              "fieldLabel": "Budget"
+            },
+            {
+              "fieldLabel": "Area Preference"
+            },
+            {
+              "fieldLabel": "Message",
+              "fieldType": "textarea"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c677f47e-5916-4015-bf32-ae68b3a2911b",
+      "name": "Manual Entry (Backend Form)",
+      "type": "n8n-nodes-base.formTrigger",
+      "typeVersion": 2.2,
+      "position": [
+        0,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Create New Lead in Odoo\").item.json.id || $(\"Update Existing Lead in Odoo\").item.json.id }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "description": "=AI Classification: {{ $json.output[0].content[0].text }}"
+          }
+        }
+      },
+      "id": "44929edc-35d9-4217-9c9b-550371f9948e",
+      "name": "Save AI Data to Odoo Lead",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        1408,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a real estate sales assistant. Draft a personalized reply to the lead. Return strict JSON with keys: email_reply, whatsapp_reply."
+            },
+            {
+              "content": "=Draft replies for lead {{ $(\"Lead Webhook (HTTP)\").item.json.body.name }} interested in {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }} with budget {{ $(\"Lead Webhook (HTTP)\").item.json.body.budget }}."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "05f9dbe4-38ea-4445-9d36-9f8b544ffb7a",
+      "name": "AI Draft Response (OpenAI / GPT)",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1568,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "email-html",
+              "name": "emailHtml",
+              "value": "=<html><body><p>{{ JSON.parse($json.output[0].content[0].text).email_reply }}</p></body></html>",
+              "type": "string"
+            },
+            {
+              "id": "email-subject",
+              "name": "emailSubject",
+              "value": "=Your Property Enquiry - {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "0ef563ac-a3ab-428a-9caa-fe65f5c0407a",
+      "name": "Format Email (HTML/Text)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "wa-text",
+              "name": "whatsappText",
+              "value": "={{ JSON.parse($(\"AI Draft Response (OpenAI / GPT)\").item.json.output[0].content[0].text).whatsapp_reply }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "faae20ea-df9d-4531-8dbe-242933284734",
+      "name": "Format WhatsApp Template",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2016,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "brochure",
+              "name": "brochureUrl",
+              "value": "<__PLACEHOLDER_VALUE__Brochure / project details PDF URL__>",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "6732e994-7220-4702-aed3-665b7c404e52",
+      "name": "Attach Brochure / Project Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2240,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:house: *New Lead*\nName: {{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}\nArea: {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }}\nBudget: {{ $(\"Lead Webhook (HTTP)\").item.json.body.budget }}\nClassification: {{ $(\"AI Classification (OpenAI / GPT)\").item.json.output[0].content[0].text }}",
+        "otherOptions": {}
+      },
+      "id": "87d31453-9437-44ba-8cde-c2f3d2d76eba",
+      "name": "Slack Lead Summary (Private Channel)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2464,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=Actions for lead *{{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}*: Approve / Reject / View Lead",
+        "otherOptions": {}
+      },
+      "id": "e7699df4-44f6-46d3-8476-119a1b885bbe",
+      "name": "Slack Message With Actions",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2688,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "message": "=Approve outreach to lead *{{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}* ({{ $(\"Lead Webhook (HTTP)\").item.json.body.area }})?",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "Reject"
+          }
+        },
+        "options": {}
+      },
+      "id": "7358973d-ea79-483a-96e6-82673f6bbdc2",
+      "name": "Human Approval (Sales Manager)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2912,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b0dcfc38-339b-44ee-a619-316f8027cc63",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        3136,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "sendHTML": true,
+        "subject": "={{ $(\"Format Email (HTML/Text)\").item.json.emailSubject }}",
+        "htmlContent": "={{ $(\"Format Email (HTML/Text)\").item.json.emailHtml }}",
+        "sender": "<__PLACEHOLDER_VALUE__Sender email (verified Brevo sender)__>",
+        "receipients": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "67f26123-a599-460e-8fe0-461a2265dfc5",
+      "name": "Send Brevo Email (Approved Template)",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.phone }}",
+        "textBody": "={{ $(\"Format WhatsApp Template\").item.json.whatsappText }}",
+        "additionalFields": {}
+      },
+      "id": "12b312c7-9075-4704-bff7-9f1bc32cb43c",
+      "name": "Send WhatsApp (Approved Template)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3584,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Create New Lead in Odoo\").item.json.id || $(\"Update Existing Lead in Odoo\").item.json.id }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "description": "=Status: Contacted | Email Sent: Yes | WhatsApp Sent: Yes | Next Follow-up: {{ $now.plus({ days: 3 }).toFormat(\"yyyy-MM-dd\") }}"
+          }
+        }
+      },
+      "id": "f54d2a4d-d0b6-4f47-8668-ca2cc5480f61",
+      "name": "Update Odoo CRM Lead Status",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        3808,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "activity",
+        "operation": "create",
+        "res_model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_RES_MODEL_1"
+        },
+        "res_id": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Create New Lead in Odoo\").item.json.id || $(\"Update Existing Lead in Odoo\").item.json.id }}"
+        },
+        "activity_type_id": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "additionalFields": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "summary": "Follow-up with lead",
+            "date_deadline": "={{ $now.plus({ days: 3 }).toFormat(\"yyyy-MM-dd\") }}"
+          }
+        }
+      },
+      "id": "58a4b096-cfcd-44b0-aed0-fdab68212a23",
+      "name": "Attach Follow-up Activity in Odoo",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        4032,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:white_check_mark: Outreach completed for *{{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}*. Email + WhatsApp sent, CRM updated.",
+        "otherOptions": {}
+      },
+      "id": "c1ac3e83-42f4-4389-bfed-523a6dda4917",
+      "name": "Notify Sales Team (Internal Note)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        4256,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "lead-name",
+              "name": "name",
+              "value": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}",
+              "type": "string"
+            },
+            {
+              "id": "lead-source",
+              "name": "source",
+              "value": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.source }}",
+              "type": "string"
+            },
+            {
+              "id": "lead-area",
+              "name": "area",
+              "value": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.area }}",
+              "type": "string"
+            },
+            {
+              "id": "lead-budget",
+              "name": "budget",
+              "value": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.budget }}",
+              "type": "string"
+            },
+            {
+              "id": "lead-class",
+              "name": "aiClassification",
+              "value": "={{ $(\"AI Classification (OpenAI / GPT)\").item.json.output[0].content[0].text }}",
+              "type": "string"
+            },
+            {
+              "id": "lead-status",
+              "name": "status",
+              "value": "Contacted",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "58cba1dc-3729-4828-8525-68d9549bc162",
+      "name": "Store Lead Data (Summary)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        4480,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<__PLACEHOLDER_VALUE__Power BI streaming dataset push URL__>",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ [{ \"name\": $json.name, \"source\": $json.source, \"area\": $json.area, \"budget\": $json.budget, \"aiClassification\": $json.aiClassification, \"status\": $json.status, \"timestamp\": $now.toISO() }] }}",
+        "options": {}
+      },
+      "id": "3bc5758a-72c0-4420-b0d2-48d8db3dfd2e",
+      "name": "Send Data to Power BI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4704,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "amount": 3,
+        "unit": "days"
+      },
+      "id": "73b56ef4-a8fb-45c1-b599-eaad26222305",
+      "name": "Wait / Delay (Until Follow-up Date)",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4928,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:alarm_clock: Follow-up due for lead *{{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}*.",
+        "otherOptions": {}
+      },
+      "id": "48bc5bf9-e58e-4fa9-bbee-c28a2ce55516",
+      "name": "Follow-up Reminder (Internal Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        5152,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a real estate follow-up assistant. Write a short, friendly follow-up message. Return strict JSON with keys: email_followup, whatsapp_followup."
+            },
+            {
+              "content": "=Write a follow-up for {{ $(\"Lead Webhook (HTTP)\").item.json.body.name }} about {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }} who has not responded yet."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "a1c5dcdd-745d-4615-b7b5-a150c040c5ec",
+      "name": "AI Generate Follow-up Message",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        5376,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "sendHTML": true,
+        "subject": "=Following up on your enquiry - {{ $(\"Lead Webhook (HTTP)\").item.json.body.area }}",
+        "htmlContent": "={{ JSON.parse($json.output[0].content[0].text).email_followup }}",
+        "sender": "<__PLACEHOLDER_VALUE__Sender email (verified Brevo sender)__>",
+        "receipients": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "f44f94dc-c0aa-45c4-98f7-03bf6ed93433",
+      "name": "Send Follow-up Email (If No Response)",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        5600,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.phone }}",
+        "textBody": "={{ JSON.parse($(\"AI Generate Follow-up Message\").item.json.output[0].content[0].text).whatsapp_followup }}",
+        "additionalFields": {}
+      },
+      "id": "9771bded-aa6c-41c4-9e79-f8c1a12d7959",
+      "name": "Send Follow-up WhatsApp (If No Response)",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        5824,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "converted",
+              "leftValue": "={{ $(\"Lead Webhook (HTTP)\").item.json.body.converted }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "7b7d18b9-adce-4d18-9e84-66c2cb6786ee",
+      "name": "Lead Converted?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        6048,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $(\"Create New Lead in Odoo\").item.json.id || $(\"Update Existing Lead in Odoo\").item.json.id }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "description": "Lead converted - marked as Won."
+          }
+        }
+      },
+      "id": "be3d52a9-a48d-401b-a52f-9bd8dd97dfd6",
+      "name": "Mark as Won in Odoo CRM",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        6272,
+        0
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "3ce639dc-1b45-46c8-a5ec-1d0d50cf156d",
+      "name": "End",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        6496,
+        96
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "21259774-634f-4028-99a5-8f85fec18e18",
+      "name": "Continue Nurture Sequence",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        6272,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:warning: Lead *{{ $(\"Lead Webhook (HTTP)\").item.json.body.name }}* was rejected. Returning to sales team for manual review.",
+        "otherOptions": {}
+      },
+      "id": "4f44efa2-335b-48dd-8e37-2da2bbec3cf1",
+      "name": "Return to Sales Team for Review",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3360,
+        288
+      ]
+    }
+  ],
+  "connections": {
+    "Lead Webhook (HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Lead Check (Odoo)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Lead - Missing Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Lead Check (Odoo)": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Found?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Lead in Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create New Lead in Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Lead in Odoo": {
+      "main": [
+        [
+          {
+            "node": "AI Classification (OpenAI / GPT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classification (OpenAI / GPT)": {
+      "main": [
+        [
+          {
+            "node": "Save AI Data to Odoo Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Lead in Odoo": {
+      "main": [
+        [
+          {
+            "node": "AI Classification (OpenAI / GPT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Manual Entry (Backend Form)": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Data to Odoo Lead": {
+      "main": [
+        [
+          {
+            "node": "AI Draft Response (OpenAI / GPT)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Draft Response (OpenAI / GPT)": {
+      "main": [
+        [
+          {
+            "node": "Format Email (HTML/Text)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format Email (HTML/Text)": {
+      "main": [
+        [
+          {
+            "node": "Format WhatsApp Template",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format WhatsApp Template": {
+      "main": [
+        [
+          {
+            "node": "Attach Brochure / Project Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Brochure / Project Details": {
+      "main": [
+        [
+          {
+            "node": "Slack Lead Summary (Private Channel)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Lead Summary (Private Channel)": {
+      "main": [
+        [
+          {
+            "node": "Slack Message With Actions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Message With Actions": {
+      "main": [
+        [
+          {
+            "node": "Human Approval (Sales Manager)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Approval (Sales Manager)": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Send Brevo Email (Approved Template)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return to Sales Team for Review",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Brevo Email (Approved Template)": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp (Approved Template)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp (Approved Template)": {
+      "main": [
+        [
+          {
+            "node": "Update Odoo CRM Lead Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Odoo CRM Lead Status": {
+      "main": [
+        [
+          {
+            "node": "Attach Follow-up Activity in Odoo",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Attach Follow-up Activity in Odoo": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team (Internal Note)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Sales Team (Internal Note)": {
+      "main": [
+        [
+          {
+            "node": "Store Lead Data (Summary)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Store Lead Data (Summary)": {
+      "main": [
+        [
+          {
+            "node": "Send Data to Power BI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Data to Power BI": {
+      "main": [
+        [
+          {
+            "node": "Wait / Delay (Until Follow-up Date)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait / Delay (Until Follow-up Date)": {
+      "main": [
+        [
+          {
+            "node": "Follow-up Reminder (Internal Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Follow-up Reminder (Internal Slack)": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Follow-up Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Generate Follow-up Message": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up Email (If No Response)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up Email (If No Response)": {
+      "main": [
+        [
+          {
+            "node": "Send Follow-up WhatsApp (If No Response)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Follow-up WhatsApp (If No Response)": {
+      "main": [
+        [
+          {
+            "node": "Lead Converted?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Converted?": {
+      "main": [
+        [
+          {
+            "node": "Mark as Won in Odoo CRM",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Continue Nurture Sequence",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mark as Won in Odoo CRM": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Continue Nurture Sequence": {
+      "main": [
+        [
+          {
+            "node": "End",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

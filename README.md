@@ -1,22 +1,42 @@
-# n8n AI Automation Portfolio
+# n8n AI Automation
 
-Business automations and system integrations built with n8n. This portfolio is being prepared for publication. Workflow exports and demo evidence will be added as they are ready to share.
+A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns and video generation. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
 
-## Workflow catalog
+## Projects
 
-Each published workflow will have its own directory under `workflows/`. The catalog will link to the workflow, describe the business outcome, and point to the available test evidence.
+| Order | Project | Workflow | Nodes |
+| --- | --- | --- | --- |
+| 01 | [AI Real Estate Lead Management](workflows/01-ai-real-estate-lead-management/README.md) | [JSON](workflows/01-ai-real-estate-lead-management/workflow.json) | 37 |
+| 02 | [Lead Management, Outreach and Reporting](workflows/02-lead-management-and-reporting/README.md) | [JSON](workflows/02-lead-management-and-reporting/workflow.json) | 48 |
+| 03 | [AI Email Reply Management](workflows/03-email-reply-management/README.md) | [JSON](workflows/03-email-reply-management/workflow.json) | 26 |
+| 04 | [WhatsApp Template Campaigns](workflows/04-whatsapp-template-campaigns/README.md) | [JSON](workflows/04-whatsapp-template-campaigns/workflow.json) | 24 |
+| 05 | [AI Video Generation and Delivery](workflows/05-ai-video-generation/README.md) | [JSON](workflows/05-ai-video-generation/workflow.json) | 27 |
 
-## Where to put a workflow
+The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These five workflows are independent exports; numbering does not imply automatic cross-workflow execution.
 
-Use `workflows/<workflow-name>/` for each automation and keep its supporting files together.
+## Getting started
 
-| File | What it contains |
-| --- | --- |
-| `workflow.json` | An importable n8n workflow export with sensitive values removed |
-| `README.md` | The business problem, trigger, integrations, setup, and expected output |
-| `sample-input.json` | Synthetic input for a reproducible demo, where applicable |
-| `evidence/` | Approved screenshots, run results, or a short demo showing success and recovery |
+Open a project README, import its workflow JSON into n8n, configure the listed credentials/resources and resolve its review items. Start with synthetic data in a test environment. Exports are inactive and contain configuration placeholders.
 
-For each workflow, identify what you built and show a normal run plus one relevant failure case, such as a duplicate submission or an unavailable API.
+## Publication status
 
-[Back to the GitHub portfolio](https://github.com/shah-hussain-bangash)
+All five exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
+
+No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the five supplied exports; it does not claim the earlier archive collections have been uploaded.
+
+## Repository layout
+
+```text
+workflows/
+  01-ai-real-estate-lead-management/
+  02-lead-management-and-reporting/
+  03-email-reply-management/
+  04-whatsapp-template-campaigns/
+  05-ai-video-generation/
+    README.md
+    CONFIGURATION.md
+    workflow.json
+    validation.json
+```
+
+Each project directory contains the same four files. Attribution and existing public template references remain with their respective workflows.

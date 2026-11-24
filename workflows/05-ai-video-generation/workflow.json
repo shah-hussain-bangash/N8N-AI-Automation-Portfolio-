@@ -1,0 +1,684 @@
+{
+  "name": "Generate videos automatically with Veo3 Fast API, Google Drive & email notifications",
+  "nodes": [
+    {
+      "parameters": {
+        "formTitle": "CGI Ads With Google Veo3 ",
+        "formDescription": "CGI Ads With Google Veo3 ",
+        "formFields": {
+          "values": [
+            {
+              "fieldLabel": "Prompt",
+              "placeholder": "Prompt Put Here",
+              "requiredField": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a1b4a7ad-efec-4a7c-a7d0-057b01cae303",
+      "name": "On form submission",
+      "type": "n8n-nodes-base.formTrigger",
+      "position": [
+        1456,
+        672
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "amount": 35
+      },
+      "id": "66f9b398-16c5-4aeb-b677-2c1e3031a4c5",
+      "name": "Wait for API Response",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2128,
+        144
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "url": "=https://veo-3-fast.p.rapidapi.com/predictions/{{ $json.id }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "veo-3-fast.p.rapidapi.com"
+            },
+            {
+              "name": "x-rapidapi-key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "0af22a6f-812c-4c1c-9a89-b06adeaaed47",
+      "name": "API Request: Check Task Status",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        2464,
+        208
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "c4f6d7db-48e4-4733-bb97-f79256367a3b",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "succeeded"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "eafc0f97-f13f-4788-bf2b-55f1dadea642",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "processing"
+                  }
+                ]
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "loose",
+                  "version": 2
+                },
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "id": "77a91a1f-9308-4a30-81d5-12ee1730eb07",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "leftValue": "={{ $json.status }}",
+                    "rightValue": "failed"
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "b5c2a32a-b64e-4997-bfe8-5b4816cf1b26",
+      "name": "Condition: Task Output Status",
+      "type": "n8n-nodes-base.switch",
+      "position": [
+        2784,
+        320
+      ],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "amount": 30
+      },
+      "id": "24483c85-ba67-433e-83aa-9852e88065a7",
+      "name": "Wait for Task to Complete",
+      "type": "n8n-nodes-base.wait",
+      "position": [
+        2160,
+        432
+      ],
+      "typeVersion": 1.1
+    },
+    {
+      "parameters": {
+        "fromEmail": "REPLACE_WITH_EMAIL_1@example.com",
+        "toEmail": "REPLACE_WITH_EMAIL_1",
+        "subject": "Failed To Get Task ID",
+        "html": "Hey This Just Inform To You API Doesn't Return task id",
+        "options": {}
+      },
+      "id": "b966188f-dd27-453b-b029-d0b720ac3598",
+      "name": "Send Email: API Error - Task ID Missing",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [
+        3216,
+        944
+      ],
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "name": "Dubai Property Testing",
+        "driveId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_DRIVEID_1"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "",
+          "mode": "list"
+        },
+        "options": {}
+      },
+      "id": "ddde32c8-f9dc-40cf-8180-b232bb40d6a8",
+      "name": "Upload File to Google Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        3296,
+        224
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "fromEmail": "REPLACE_WITH_EMAIL_1",
+        "toEmail": "REPLACE_WITH_EMAIL_1",
+        "subject": "Failed To Generate Image ",
+        "html": "Task id : {{ $json.id }}\nFailed to generate video.",
+        "options": {}
+      },
+      "id": "973a3938-043f-4ce7-8122-e7d1946c24c0",
+      "name": "Send Email: API Error - Task Failed",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [
+        3504,
+        576
+      ],
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "operation": "share",
+        "fileId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_FILEID_1",
+          "mode": "id"
+        },
+        "permissionsUi": {
+          "permissionsValues": {
+            "role": "owner",
+            "type": "anyone"
+          }
+        },
+        "options": {}
+      },
+      "id": "5e5256dd-e767-484d-8b4f-c0dc62b71f9d",
+      "name": "Set Google Drive Permissions",
+      "type": "n8n-nodes-base.googleDrive",
+      "position": [
+        3616,
+        320
+      ],
+      "typeVersion": 3
+    },
+    {
+      "parameters": {
+        "content": "Sends an error email if the task ID is missing in the response.",
+        "height": 240
+      },
+      "id": "e7c87caf-cf15-4b6a-8648-22ff8bfa764f",
+      "name": "Sticky Note8",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3152,
+        864
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Uploads the processed video to Google Drive.",
+        "height": 240
+      },
+      "id": "5132d3ef-ee14-4d7e-80db-03c756933aa9",
+      "name": "Sticky Note9",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3232,
+        160
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Sets the necessary permissions for the uploaded Google Drive file.",
+        "height": 208
+      },
+      "id": "5fa2259b-54dc-4974-9198-730ba8e756e9",
+      "name": "Sticky Note10",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3552,
+        272
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "Sends an email if the video generation task fails",
+        "height": 240
+      },
+      "id": "ce288355-cc9e-4677-a1c2-3e2d329be59f",
+      "name": "Sticky Note11",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3440,
+        544
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "bcc58e3d-9609-4ec3-adb9-bc6098205818",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              },
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "success"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d069c2dc-7576-478f-8510-4beb55871bff",
+      "name": "Condition: Check Task Id",
+      "type": "n8n-nodes-base.if",
+      "position": [
+        2320,
+        688
+      ],
+      "typeVersion": 2.2
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://veo-3-fast.p.rapidapi.com/predictions ",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "x-rapidapi-host",
+              "value": "veo-3-fast.p.rapidapi.com"
+            },
+            {
+              "name": "x-rapidapi-key",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "=json",
+        "specifyBody": "json",
+        "bodyParameters": {
+          "parameters": [
+            {}
+          ]
+        },
+        "jsonBody": "={\n  \"version\": \"d7aca9396ea28c4ef46700a43cb59546c9948396eb571ca083df8344391335b3\",\n  \"input\": {\n    \"prompt\": \"{{ $json.Prompt }}\",\n    \"enhance_prompt\": true\n  }\n}",
+        "options": {}
+      },
+      "id": "6510719b-49cf-4264-985b-1ed5b98b1a9f",
+      "name": "Veo 3 Fast API Processor",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        1888,
+        688
+      ],
+      "typeVersion": 4.2,
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "content": "Sends an email if the video generation is completed "
+      },
+      "id": "fe19829a-6780-450f-b291-295e1afcd0d7",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        3856,
+        272
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "fromEmail": "REPLACE_WITH_EMAIL_1",
+        "toEmail": "REPLACE_WITH_EMAIL_1",
+        "html": "=Hey , \nYour video is ready.\nLink : {{ $('Upload File to Google Drive').item.json.webViewLink }}",
+        "options": {}
+      },
+      "id": "e2f94f99-24d9-45ce-b69e-b2971b44b4a3",
+      "name": "Send an email : Video Link",
+      "type": "n8n-nodes-base.emailSend",
+      "position": [
+        3904,
+        368
+      ],
+      "typeVersion": 2.1
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.output }}",
+        "options": {}
+      },
+      "id": "adeb491a-668c-47ef-bcff-31058cc05087",
+      "name": "Download Video",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        3040,
+        240
+      ],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "content": "  - Triggers the workflow when a form is submitted with a prompt field.",
+        "height": 272
+      },
+      "id": "97397cd2-7d14-453b-a570-479027546e33",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1392,
+        560
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "   - Processes the form's prompt by making an API call to the \"Veo 3 Fast\" API.",
+        "height": 240
+      },
+      "id": "dfac4580-4985-4f83-8374-2d5052d4b298",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1824,
+        608
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": " - Checks if the task ID is present before continuing; sends an error email if missing.",
+        "height": 240
+      },
+      "id": "ef977b46-0269-4d63-b1fa-dbbe25d0f3eb",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2256,
+        592
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "  - Waits for 35 seconds to allow the API response to be processed.",
+        "height": 256
+      },
+      "id": "07715224-0b63-4416-9441-66f5f486cce2",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2080,
+        32
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "   - Waits for 30 seconds before rechecking the task’s completion status.",
+        "height": 256
+      },
+      "id": "a5f6343f-e434-4514-96d6-296a843e342f",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2096,
+        336
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": " - Sends an HTTP request to check the status of a task using its ID.",
+        "height": 208
+      },
+      "id": "4ee1be65-7a6d-4fc2-8e38-ab85dc1bf989",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2384,
+        128
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "- Checks the task's output status for success, processing, or failure.",
+        "height": 272
+      },
+      "id": "0ab9da31-c810-4693-a72b-fa0828d94f2e",
+      "name": "Sticky Note7",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2704,
+        224
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": "- Downloads the processed video from the output URL provided by the API response.",
+        "height": 240
+      },
+      "id": "f38dbac6-555d-4ad3-830d-9ecb8ba9dba8",
+      "name": "Sticky Note12",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2960,
+        128
+      ],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "content": " **Veo 3 Video Generation and Google Drive Integration**\n\n## Description:\nThis workflow automates the process of generating a video using the **Veo 3 Fast API** based on a user-submitted prompt, uploading the generated video to **Google Drive**, and sending an email with a link to the uploaded video.\n\n## Flow:\n1. **Form Submission** - Triggered by user input through a form (prompt).\n2. **API Call (Veo 3 Fast)** - Sends the prompt to the API for video generation.\n3. **Check Task Status** - Monitors the task's status to confirm whether it's succeeded, still processing, or failed.\n4. **Wait for Completion** - Waits for the task to complete if it's still processing.\n5. **Error Handling** - Sends an email if the task fails or if the task ID is missing in the response.\n6. **Google Drive Upload** - Uploads the completed video to Google Drive.\n7. **Set Permissions** - Configures the necessary permissions for the uploaded video.\n8. **Send Video Link** - Sends an email to the user with a link to the uploaded video.\n\n## Outcome:\n- **Successful Flow**: The user receives a video link in an email.\n- **Failure Handling**: If an error occurs (e.g., task failure or missing task ID), the system notifies the team via email.\n",
+        "height": 688,
+        "width": 992
+      },
+      "id": "4f6c3939-8d35-499e-802c-2340cfb44781",
+      "name": "Sticky Note13",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        368,
+        240
+      ],
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Download Video": {
+      "main": [
+        [
+          {
+            "node": "Upload File to Google Drive",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "On form submission": {
+      "main": [
+        [
+          {
+            "node": "Veo 3 Fast API Processor",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for API Response": {
+      "main": [
+        [
+          {
+            "node": "API Request: Check Task Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Condition: Check Task Id": {
+      "main": [
+        [
+          {
+            "node": "Wait for API Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email: API Error - Task ID Missing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Veo 3 Fast API Processor": {
+      "main": [
+        [
+          {
+            "node": "Condition: Check Task Id",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait for Task to Complete": {
+      "main": [
+        [
+          {
+            "node": "API Request: Check Task Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upload File to Google Drive": {
+      "main": [
+        [
+          {
+            "node": "Set Google Drive Permissions",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Set Google Drive Permissions": {
+      "main": [
+        [
+          {
+            "node": "Send an email : Video Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Condition: Task Output Status": {
+      "main": [
+        [
+          {
+            "node": "Download Video",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Wait for Task to Complete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Email: API Error - Task Failed",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "API Request: Check Task Status": {
+      "main": [
+        [
+          {
+            "node": "Condition: Task Output Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

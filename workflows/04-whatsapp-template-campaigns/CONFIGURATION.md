@@ -1,0 +1,27 @@
+# Configuration
+
+Original account values are not included. Configure the resources in these nodes after import. Numbered placeholders distinguish original resource values; use the same replacement wherever a placeholder repeats. Do not treat placeholders as usable credentials.
+
+| Node | Public placeholder |
+| --- | --- |
+| Update row in sheet | `REPLACE_WITH_DOCUMENTID_1`, `REPLACE_WITH_SHEETNAME_1` |
+| Sticky Note3 | `REPLACE_WITH_REFERENCE_RESOURCE_1` |
+| Sticky Note10 | `REPLACE_WITH_REFERENCE_RESOURCE_2` |
+
+## Credential types present in the source
+
+`googleSheetsOAuth2Api`
+
+This is an inventory of exported credential types, not an exhaustive list of required connections. Nodes with empty configuration may require additional credentials.
+
+## Existing source placeholders
+
+No legacy placeholder markers detected.
+
+## Google Sheets mapped columns
+
+`row_number`
+
+## Public-export preparation
+
+Workflow activation disabled; exported account credential references, cached resource labels/links and deployment metadata removed; hardcoded contact and resource values replaced. Source files remain unchanged. Existing node logic, layout and connections are retained.

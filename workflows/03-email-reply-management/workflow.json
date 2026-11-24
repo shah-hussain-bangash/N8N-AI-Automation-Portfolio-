@@ -1,0 +1,3397 @@
+{
+  "name": "Email Reply Automation (Outlook + Google Sheets)",
+  "nodes": [
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c-isreply",
+              "leftValue": "={{ ($json.subject || '').toLowerCase() }}",
+              "rightValue": "RE:",
+              "operator": {
+                "type": "string",
+                "operation": "contains"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "id": "f94f420e-bb6d-46c0-9327-458b8613ab04",
+      "name": "IF (Is Reply?)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -592,
+        816
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "a1",
+              "name": "senderEmail",
+              "value": "={{ ($json.metadata['return-path'] || '').replace(/[<>]/g, '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "a2",
+              "name": "senderName",
+              "value": "={{ ($json.metadata['return-path'] || '').replace(/[<>]/g, '').split('@')[0] }}",
+              "type": "string"
+            },
+            {
+              "id": "a3",
+              "name": "subject",
+              "value": "={{ $json.metadata.subject || '' }}",
+              "type": "string"
+            },
+            {
+              "id": "a4",
+              "name": "body",
+              "value": "={{ $json.textPlain }}",
+              "type": "string"
+            },
+            {
+              "id": "a5",
+              "name": "messageId",
+              "value": "={{ $json.metadata['message-id'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a6",
+              "name": "receivedTime",
+              "value": "={{ $json.metadata['delivery-date'] }}",
+              "type": "string"
+            },
+            {
+              "id": "ec912b6f-2210-449a-be96-80d80780c0f9",
+              "name": "recipientEmail",
+              "value": "={{ $json.metadata['delivered-to'] }}",
+              "type": "string"
+            },
+            {
+              "id": "a20e72e7-57bd-4ac8-87ea-139d60806608",
+              "name": "rawFrom",
+              "value": "`{{ $json.metadata['return-path']",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "e82f5a40-4aa5-4a0c-b992-a27df29109d6",
+      "name": "Extract Details",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $json.senderEmail }}"
+            }
+          ]
+        },
+        "options": {
+          "returnFirstMatch": true
+        }
+      },
+      "id": "31a61b84-7a20-4b36-b2a1-183d77e4444a",
+      "name": "Google Sheets Get Row(s)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        672,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "c-leadfound",
+              "leftValue": "={{ $json[\"Lead ID\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "c53cd7d5-3ec0-4e77-9478-c84c643d8b67",
+      "name": "IF (Lead Found?)",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        896,
+        768
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $json[\"Lead ID\"] }}",
+            "Customer Reply": "={{ $('Extract Details').item.json.body }}",
+            "Reply Received": "Yes",
+            "Last Reply Date": "={{ $('Extract Details').item.json.receivedTime }}",
+            "Message ID": "={{ $('Extract Details').item.json.messageId }}",
+            "Last Contact Method": "Email",
+            "Last Updated": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Reply",
+              "displayName": "Customer Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Intent",
+              "displayName": "AI Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Confidence",
+              "displayName": "AI Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Received",
+              "displayName": "Reply Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reply Date",
+              "displayName": "Last Reply Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation Status",
+              "displayName": "Conversation Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact Method",
+              "displayName": "Last Contact Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Count",
+              "displayName": "Follow-up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Requested",
+              "displayName": "Callback Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Date",
+              "displayName": "Callback Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Time",
+              "displayName": "Callback Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "8e784810-4a35-4543-b934-5792fbaa8fad",
+      "name": "Google Sheets Update Row",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1120,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o-mini"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Analyze this customer email reply for our real estate sales workflow.\n\nLead ID:\n{{ $('Google Sheets Update Row').item.json[\"Lead ID\"] }}\n\nCustomer Reply:\n{{ $('Google Sheets Update Row').item.json[\"Customer Reply\"] }}\n\nClassify the reply and return ONLY valid JSON with these fields:\n\n{\n  \"intent\": \"\",\n  \"summary\": \"\",\n  \"confidence\": 0,\n  \"recommendedAction\": \"\",\n  \"sentiment\": \"\",\n  \"priority\": \"\",\n  \"meetingRequested\": \"\",\n  \"callbackRequested\": \"\",\n  \"callbackDate\": \"\",\n  \"callbackTime\": \"\"\n}\n\nAllowed values for intent:\nInterested\nMeeting Requested\nQuestion Asked\nNot Interested\nCallback Needed\n\nRules:\n- confidence must be a number from 0 to 100\n- sentiment must be Positive, Neutral, or Negative\n- priority must be High, Medium, or Low\n- meetingRequested must be Yes or No\n- callbackRequested must be Yes or No\n- If no callback date/time is mentioned, return empty strings\n- Do not add markdown\n- Do not add explanations outside the JSON"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are an AI sales CRM classifier for Dubai real estate leads. Analyze only the customer's latest reply. Return valid JSON only and follow the allowed intent values exactly.",
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          },
+          "temperature": 0.1
+        }
+      },
+      "id": "923fc6cc-4364-4c11-bd69-020d5cdbae08",
+      "name": "OpenAI - Analyze Reply",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "runOnceForEachItem",
+        "jsCode": "const ai = $json.output[0].content[0].text;\n\nreturn {\n  json: {\n    Intent: ai.intent,\n    Summary: ai.summary,\n    Confidence: ai.confidence,\n    RecommendedAction: ai.recommendedAction,\n    Sentiment: ai.sentiment,\n    Priority: ai.priority,\n    MeetingRequested: ai.meetingRequested,\n    CallbackRequested: ai.callbackRequested,\n    CallbackDate: ai.callbackDate,\n    CallbackTime: ai.callbackTime\n  }\n};"
+      },
+      "id": "e087c136-84be-42c6-8c6d-140f70ce2b5c",
+      "name": "Parse AI Response",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1600,
+        672
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "expression",
+        "numberOutputs": 5,
+        "output": "={{\n  $json.Intent === \"Interested\" ? 0 :\n  $json.Intent === \"Meeting Requested\" ? 1 :\n  $json.Intent === \"Question Asked\" ? 2 :\n  $json.Intent === \"Not Interested\" ? 3 :\n  $json.Intent === \"Callback Needed\" ? 4 :\n  3\n}}"
+      },
+      "id": "18b8b7de-1647-4960-92ee-a3bcdedf3503",
+      "name": "Route by Intent",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        1792,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}",
+            "Lead Status": "Interested",
+            "AI Intent": "={{ $('Parse AI Response').item.json.Intent }}",
+            "AI Summary": "={{ $('Parse AI Response').item.json.Summary }}",
+            "AI Confidence": "={{ $('Parse AI Response').item.json.Confidence }}",
+            "Recommended Action": "={{ $('Parse AI Response').item.json.RecommendedAction }}",
+            "Sentiment": "={{ $('Parse AI Response').item.json.Sentiment }}",
+            "Customer Reply": "={{ $('Google Sheets Update Row').item.json[\"Customer Reply\"] }}",
+            "Reply Received": "Yes",
+            "Last Reply Date": "={{ $('Google Sheets Update Row').item.json[\"Last Reply Date\"] }}",
+            "Message ID": "={{ $('Google Sheets Update Row').item.json[\"Message ID\"] }}",
+            "Last Contact Method": "Email",
+            "Last Updated": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Reply",
+              "displayName": "Customer Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Intent",
+              "displayName": "AI Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Confidence",
+              "displayName": "AI Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Received",
+              "displayName": "Reply Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reply Date",
+              "displayName": "Last Reply Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation Status",
+              "displayName": "Conversation Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact Method",
+              "displayName": "Last Contact Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Count",
+              "displayName": "Follow-up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Requested",
+              "displayName": "Callback Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Date",
+              "displayName": "Callback Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Time",
+              "displayName": "Callback Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "72e00e90-970e-4e72-879f-4f465cbcab0d",
+      "name": "Update Lead Status (Interested)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🟢 *Customer Interested*\n*Lead:* {{ $('Extract Details').item.json.senderName }} <{{ $('Extract Details').item.json.senderEmail }}>\n*Summary:* {{ $('Parse AI Response').item.json.summary }}",
+        "otherOptions": {}
+      },
+      "id": "8a448542-ca65-4c0c-a9fe-88bf46755800",
+      "name": "Slack Notification (Customer Interested)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2240,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('Google Sheets Get Row(s)').item.json[\"Lead ID\"] }}",
+            "Email": "={{ $('Extract Details').item.json.senderEmail }}",
+            "Task Type": "Call",
+            "Priority": "Normal",
+            "Assigned Sales Person": "={{ $('Google Sheets Get Row(s)').item.json[\"Assigned Sales Person\"] }}",
+            "Notes": "={{ $('Parse AI Response').item.json.summary }}",
+            "Created At": "={{ $now.toISO() }}",
+            "Call Completed": "No"
+          },
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Task Type",
+              "displayName": "Task Type",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "type": "string",
+              "display": true,
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "efacec45-c9c0-41ae-8822-d48afbb3cf88",
+      "name": "Create Call Task (Interested)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2464,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}",
+            "Lead Status": "Meeting Requested",
+            "AI Intent": "={{ $('Parse AI Response').item.json.Intent }}",
+            "AI Summary": "={{ $('Parse AI Response').item.json.Summary }}",
+            "AI Confidence": "={{ $('Parse AI Response').item.json.Confidence }}",
+            "Recommended Action": "={{ $('Parse AI Response').item.json.RecommendedAction }}",
+            "Sentiment": "={{ $('Parse AI Response').item.json.Sentiment }}",
+            "AI Priority": "={{ $('Parse AI Response').item.json.Priority }}",
+            "Reply Received": "Yes",
+            "Last Contact Method": "Email",
+            "Last Updated": "={{ $now }}",
+            "Message ID": "={{ $('Google Sheets Update Row').item.json[\"Message ID\"] }}",
+            "Follow-up Date": "={{ $now.plus({days:1}) }}",
+            "Approval Status": "Pending"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Reply",
+              "displayName": "Customer Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Intent",
+              "displayName": "AI Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Confidence",
+              "displayName": "AI Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Received",
+              "displayName": "Reply Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reply Date",
+              "displayName": "Last Reply Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation Status",
+              "displayName": "Conversation Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact Method",
+              "displayName": "Last Contact Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Count",
+              "displayName": "Follow-up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Requested",
+              "displayName": "Callback Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Date",
+              "displayName": "Callback Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Time",
+              "displayName": "Callback Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e0e7ebc5-04f0-4e0e-98d5-6cacf43eeef3",
+      "name": "Update Lead Status (Meeting Requested)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "calendar": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CALENDAR_1",
+          "mode": "id"
+        },
+        "start": "={{ $now.plus(1, 'day').set({ hour: 10, minute: 0, second: 0 }).toISO() }}",
+        "end": "={{ $now.plus(1, 'day').set({ hour: 10, minute: 30, second: 0 }).toISO() }}",
+        "additionalFields": {
+          "attendees": [
+            "={{ $('Extract Details').item.json.senderEmail }}",
+            ""
+          ],
+          "description": "=Meeting requested via customer email reply.\n\nLead ID:\n{{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}\n\nCustomer:\n{{ $('Extract Details').item.json.senderName }}\n\nEmail:\n{{ $('Extract Details').item.json.senderEmail }}\n\nIntent:\n{{ $('Parse AI Response').item.json.Intent }}\n\nAI Summary:\n{{ $('Parse AI Response').item.json.Summary }}\n\nConfidence:\n{{ $('Parse AI Response').item.json.Confidence }}%\n\nRecommended Action:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\nCustomer Message:\n{{ $('Extract Details').item.json.body }}",
+          "summary": "=Property Investment Meeting - {{ $('Extract Details').item.json.senderName }}"
+        }
+      },
+      "id": "eccc638a-d8da-4c0e-96d7-bf2ba10d07ea",
+      "name": "Create Calendar Event (Meeting)",
+      "type": "n8n-nodes-base.googleCalendar",
+      "typeVersion": 1.3,
+      "position": [
+        2240,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=📅 *NEW PROPERTY INVESTMENT MEETING REQUEST*\n\n👤 Lead:\n{{ $('Extract Details').item.json.senderName }}\n\n📧 Email:\n{{ $('Extract Details').item.json.senderEmail }}\n\n📱 Lead ID:\n{{ $('Update Lead Status (Meeting Requested)').item.json[\"Lead ID\"] }}\n\n📝 Customer Message:\n{{ $('Extract Details').item.json.body }}\n\n🤖 AI Summary:\n{{ $('Parse AI Response').item.json.Summary }}\n\n⭐ Priority:\n{{ $('Parse AI Response').item.json.Priority }}\n\n💡 Recommendation:\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n📅 Meeting Time:\n{{ $('Create Calendar Event (Meeting)').item.json.start.dateTime }}\n\n📌 Status:\nMeeting Requested\n\n🤖 Generated automatically by n8n",
+        "otherOptions": {}
+      },
+      "id": "5eb5c74b-0418-466a-a7f7-83108649df4a",
+      "name": "Slack Notification (Meeting Requested)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2464,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}",
+            "Lead Status": "Question",
+            "AI Intent": "={{ $('Parse AI Response').item.json.Intent }}",
+            "AI Summary": "={{ $('Parse AI Response').item.json.Summary }}",
+            "AI Confidence": "={{ $('Parse AI Response').item.json.Confidence }}",
+            "Recommended Action": "={{ $('Parse AI Response').item.json.RecommendedAction }}",
+            "Sentiment": "={{ $('Parse AI Response').item.json.Sentiment }}",
+            "AI Priority": "={{ $('Parse AI Response').item.json.Priority }}",
+            "Reply Received": "Yes",
+            "Last Contact Method": "Email",
+            "Last Reply Date": "={{ $('Google Sheets Update Row').item.json[\"Last Reply Date\"] }}",
+            "Customer Reply": "={{ $('Google Sheets Update Row').item.json[\"Customer Reply\"] }}",
+            "Message ID": "={{ $('Google Sheets Update Row').item.json[\"Message ID\"] }}",
+            "Last Updated": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Reply",
+              "displayName": "Customer Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Intent",
+              "displayName": "AI Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Confidence",
+              "displayName": "AI Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Received",
+              "displayName": "Reply Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reply Date",
+              "displayName": "Last Reply Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation Status",
+              "displayName": "Conversation Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact Method",
+              "displayName": "Last Contact Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Count",
+              "displayName": "Follow-up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Requested",
+              "displayName": "Callback Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Date",
+              "displayName": "Callback Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Time",
+              "displayName": "Callback Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0e25a199-33f1-4abc-bbb9-5041211fa16f",
+      "name": "Update Lead Status (Question)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=❓ *NEW CUSTOMER QUESTION RECEIVED*\n\n👤 *Lead:*\n{{ $('Extract Details').item.json.senderName }}\n\n📧 *Email:*\n{{ $('Extract Details').item.json.senderEmail }}\n\n🆔 *Lead ID:*\n{{ $('Update Lead Status (Question)').item.json[\"Lead ID\"] }}\n\n💬 *Customer Question:*\n{{ $('Extract Details').item.json.body }}\n\n🤖 *AI Summary:*\n{{ $('Parse AI Response').item.json.Summary }}\n\n⭐ *Priority:*\n{{ $('Parse AI Response').item.json.Priority }}\n\n💡 *Recommended Action:*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n📌 *Lead Status:*\nQuestion\n\n🤖 Generated automatically by n8n",
+        "otherOptions": {}
+      },
+      "id": "9d7d2f80-f679-4606-94f2-3d094eae72d2",
+      "name": "Slack Notification (Question Received)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2240,
+        384
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}",
+            "Lead Status": "Lost",
+            "AI Intent": "={{ $('Parse AI Response').item.json.Intent }}",
+            "AI Summary": "={{ $('Parse AI Response').item.json.Summary }}",
+            "AI Confidence": "={{ $('Parse AI Response').item.json.Confidence }}",
+            "Recommended Action": "={{ $('Parse AI Response').item.json.RecommendedAction }}",
+            "Sentiment": "={{ $('Parse AI Response').item.json.Sentiment }}",
+            "AI Priority": "={{ $('Parse AI Response').item.json.Priority }}",
+            "Reply Received": "Yes",
+            "Customer Reply": "={{ $('Google Sheets Update Row').item.json[\"Customer Reply\"] }}",
+            "Last Reply Date": "={{ $('Google Sheets Update Row').item.json[\"Last Reply Date\"] }}",
+            "Message ID": "={{ $('Google Sheets Update Row').item.json[\"Message ID\"] }}",
+            "Last Contact Method": "Email",
+            "Last Updated": "={{ $now }}"
+          },
+          "matchingColumns": [
+            "Lead ID"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Customer Reply",
+              "displayName": "Customer Reply",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Intent",
+              "displayName": "AI Intent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Summary",
+              "displayName": "AI Summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Confidence",
+              "displayName": "AI Confidence",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Recommended Action",
+              "displayName": "Recommended Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Reply Received",
+              "displayName": "Reply Received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Reply Date",
+              "displayName": "Last Reply Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message ID",
+              "displayName": "Message ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Conversation Status",
+              "displayName": "Conversation Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Contact Method",
+              "displayName": "Last Contact Method",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Count",
+              "displayName": "Follow-up Count",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Meeting Date",
+              "displayName": "Meeting Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Requested",
+              "displayName": "Callback Requested",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Date",
+              "displayName": "Callback Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Callback Time",
+              "displayName": "Callback Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_number",
+              "displayName": "row_number",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "readOnly": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "0cd897e6-3e0e-44f5-99ff-6a6febf32111",
+      "name": "Update Lead Status (Lost)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2016,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🔴 *CUSTOMER NOT INTERESTED*\n\n👤 *Lead:*\n{{ $('Extract Details').item.json.senderName }}\n\n📧 *Email:*\n{{ $('Extract Details').item.json.senderEmail }}\n\n🆔 *Lead ID:*\n{{ $('Update Lead Status (Lost)').item.json[\"Lead ID\"] }}\n\n💬 *Customer Message:*\n{{ $('Extract Details').item.json.body }}\n\n🤖 *AI Summary:*\n{{ $('Parse AI Response').item.json.Summary }}\n\n⭐ *Priority:*\n{{ $('Parse AI Response').item.json.Priority }}\n\n📌 *Lead Status:*\nNot Interested\n\n💡 *Reason / Recommendation:*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n🤖 Generated automatically by n8n",
+        "otherOptions": {}
+      },
+      "id": "0fd213f7-1db0-489b-b218-14fff341d82c",
+      "name": "Slack Notification (Not Interested)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2240,
+        576
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Email"
+          ],
+          "value": {
+            "Email": "={{ $('Extract Details').item.json.senderEmail }}",
+            "Lead Status": "Need Callback",
+            "Last Updated": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "type": "string",
+              "display": true,
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7aa03609-5cb6-47ee-954e-0854084462d6",
+      "name": "Update Lead Status (Callback Needed)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3200,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead ID": "={{ $('Google Sheets Get Row(s)').item.json[\"Lead ID\"] }}",
+            "Email": "={{ $('Extract Details').item.json.senderEmail }}",
+            "Task Type": "Call",
+            "Priority": "High",
+            "Assigned Sales Person": "={{ $('Google Sheets Get Row(s)').item.json[\"Assigned Sales Person\"] }}",
+            "Notes": "={{ $('Parse AI Response').item.json.summary }}",
+            "Created At": "={{ $now.toISO() }}",
+            "Call Completed": "No"
+          },
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Task Type",
+              "displayName": "Task Type",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Notes",
+              "displayName": "Notes",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Created At",
+              "displayName": "Created At",
+              "type": "string",
+              "display": true,
+              "required": false
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "type": "string",
+              "display": true,
+              "required": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "72cfef6b-e7cf-4dde-95ff-810147fa043f",
+      "name": "Create Call Task (Priority High)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        3456,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_2"
+        },
+        "text": "=📞 *Callback Needed*\n*Lead:* {{ $('Extract Details').item.json.senderName }} <{{ $('Extract Details').item.json.senderEmail }}>\n*Summary:* {{ $('Parse AI Response').item.json.summary }}",
+        "otherOptions": {}
+      },
+      "id": "fa9570ab-8aa0-44fa-b5e2-8b5dc57ce3db",
+      "name": "Slack Notification (Callback Needed)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3680,
+        784
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_2",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            " Audit ID": "={{ 'AUD-' + Date.now() }}",
+            "Lead ID": "={{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}",
+            "Date": "={{ $now.toFormat('yyyy-MM-dd') }}",
+            "Time": "={{ $now.toFormat('HH:mm:ss') }}",
+            "Action": "Email Reply Analyzed",
+            "Status": "={{ $('Parse AI Response').item.json.Intent }}",
+            "Channel": "Email",
+            "Performed By": "AI Automation",
+            "Details": "={{ $('Parse AI Response').item.json.Summary }}",
+            "Previous Status": "={{ $('IF (Lead Found?)').item.json[\"Lead Status\"] }}",
+            "New Status": "={{ $('Parse AI Response').item.json.Intent }}",
+            "User": "={{ $('Extract Details').item.json.senderEmail }}",
+            "Remarks": "={{ $('Parse AI Response').item.json.RecommendedAction }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": " Audit ID",
+              "displayName": " Audit ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Time",
+              "displayName": "Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Action",
+              "displayName": "Action",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Status",
+              "displayName": "Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Channel",
+              "displayName": "Channel",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Performed By",
+              "displayName": "Performed By",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Details",
+              "displayName": "Details",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Previous Status",
+              "displayName": "Previous Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "New Status",
+              "displayName": "New Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "User",
+              "displayName": "User",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Remarks",
+              "displayName": "Remarks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e9fa477e-b4b8-4937-9a58-ee68d93bacf2",
+      "name": "Append to Audit Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1792,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🚨 *New Customer Email Reply Processed*\n\n👤 *Lead:* {{ $('Extract Details').item.json.senderName }}\n📧 *Email:* {{ $('Extract Details').item.json.senderEmail }}\n\n🎯 *Intent:* {{ $('Parse AI Response').item.json.Intent }}\n📊 *Priority:* {{ $('Parse AI Response').item.json.Priority }}\n😊 *Sentiment:* {{ $('Parse AI Response').item.json.Sentiment }}\n🎯 *Confidence:* {{ $('Parse AI Response').item.json.Confidence }}%\n\n📝 *Summary:*\n{{ $('Parse AI Response').item.json.Summary }}\n\n💡 *Recommended Action:*\n{{ $('Parse AI Response').item.json.RecommendedAction }}\n\n📌 *Current Lead Status:*\n{{ $('Parse AI Response').item.json.Intent }}\n\n🆔 *Lead ID:*\n{{ $('IF (Lead Found?)').item.json[\"Lead ID\"] }}\n\n⏰ {{ $now.toFormat('yyyy-MM-dd HH:mm:ss') }}",
+        "otherOptions": {}
+      },
+      "id": "66248fb3-187d-4453-ab9b-35eeeae90886",
+      "name": "Notify Sales Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2016,
+        960
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_3"
+        },
+        "text": "=⚠️ *Lead Not Found*\nAn email reply was received from an unknown sender.\n*From:* {{ $('Extract Details').item.json.senderName }} <{{ $('Extract Details').item.json.senderEmail }}>\n*Subject:* {{ $('Extract Details').item.json.subject }}",
+        "otherOptions": {}
+      },
+      "id": "48cbe64c-a7fc-48d2-ab89-fbbc3d47afe1",
+      "name": "Slack Alert - Lead Not Found",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1120,
+        864
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "454ed65e-a231-4b37-95bd-cab3468afd9e",
+      "name": "Ignore Email (Not a Reply)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        -592,
+        1056
+      ]
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.emailReadImap",
+      "typeVersion": 2.2,
+      "position": [
+        192,
+        768
+      ],
+      "id": "aa431d25-170c-4394-88dd-faa2cfa18762",
+      "name": "Email Trigger (IMAP)"
+    }
+  ],
+  "connections": {
+    "IF (Is Reply?)": {
+      "main": [
+        [],
+        []
+      ]
+    },
+    "Extract Details": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Get Row(s)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Get Row(s)": {
+      "main": [
+        [
+          {
+            "node": "IF (Lead Found?)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "IF (Lead Found?)": {
+      "main": [
+        [
+          {
+            "node": "Google Sheets Update Row",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Slack Alert - Lead Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Sheets Update Row": {
+      "main": [
+        [
+          {
+            "node": "OpenAI - Analyze Reply",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenAI - Analyze Reply": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Response": {
+      "main": [
+        [
+          {
+            "node": "Route by Intent",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Append to Audit Log",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route by Intent": {
+      "main": [
+        [
+          {
+            "node": "Update Lead Status (Interested)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead Status (Meeting Requested)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead Status (Question)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead Status (Lost)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Update Lead Status (Interested)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification (Customer Interested)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Notification (Customer Interested)": {
+      "main": [
+        [
+          {
+            "node": "Create Call Task (Interested)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status (Meeting Requested)": {
+      "main": [
+        [
+          {
+            "node": "Create Calendar Event (Meeting)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Calendar Event (Meeting)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification (Meeting Requested)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status (Question)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification (Question Received)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status (Lost)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification (Not Interested)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status (Callback Needed)": {
+      "main": [
+        [
+          {
+            "node": "Create Call Task (Priority High)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Call Task (Priority High)": {
+      "main": [
+        [
+          {
+            "node": "Slack Notification (Callback Needed)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append to Audit Log": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Email Trigger (IMAP)": {
+      "main": [
+        [
+          {
+            "node": "Extract Details",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
