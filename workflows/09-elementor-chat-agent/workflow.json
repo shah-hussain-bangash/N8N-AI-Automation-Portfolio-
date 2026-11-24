@@ -1,0 +1,140 @@
+{
+  "name": "Elementor Website Builder",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {
+          "allowFileUploads": true,
+          "allowedFilesMimeTypes": "image/*"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "cf800e5d-b5ab-4e56-a94e-d805cc2ee4ae",
+      "name": "When chat message received"
+    },
+    {
+      "parameters": {
+        "batching": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        912,
+        560
+      ],
+      "id": "8f103934-43a9-4ff3-8f21-dde9ad4f7bcf",
+      "name": "Basic LLM Chain"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_MODEL_1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        1408,
+        576
+      ],
+      "id": "b546d2a6-515a-47da-bdcc-828e5edc77f6",
+      "name": "Anthropic Chat Model"
+    },
+    {
+      "parameters": {
+        "options": {
+          "systemMessage": "You are an expert WordPress Elementor website designer and frontend UI/UX developer.\n\nYour job is to analyze website design screenshots supplied by the user and reproduce the design as accurately as possible using WordPress Elementor.\n\nOBJECTIVES:\n1. Analyze the supplied screenshot carefully.\n2. Identify every visible section from top to bottom.\n3. Determine the layout structure, containers, columns, spacing, alignment, typography, colors, backgrounds, borders, shadows, buttons, icons and images.\n4. Reproduce the screenshot as closely as possible.\n5. Prefer native Elementor Containers and Widgets instead of placing the entire page inside one HTML widget.\n6. Keep headings, paragraphs, buttons, images and other elements independently editable in Elementor.\n7. Create responsive settings for desktop, tablet and mobile.\n8. Preserve proper semantic heading structure such as H1, H2 and H3.\n9. Use clean, lightweight structures and avoid unnecessary nested containers.\n10. Do not modify existing published pages unless explicitly instructed.\n11. New designs must initially be created as drafts for review.\n12. Do not publish a page without explicit approval.\n\nELEMENTOR COMPONENTS:\nUse appropriate Elementor components including:\n- Containers\n- Heading widgets\n- Text Editor widgets\n- Image widgets\n- Button widgets\n- Icon widgets\n- Icon List widgets\n- Spacer widgets only when necessary\n- Forms when required\n- Elementor Pro widgets when appropriate\n\nSCREENSHOT ANALYSIS:\nWhen an image is supplied, treat it as the primary visual design reference. Analyze:\n- Header/navigation\n- Hero section\n- Content sections\n- Cards\n- Images\n- CTA sections\n- Forms\n- Testimonials\n- Statistics\n- FAQ sections\n- Footer\n- Overall page width\n- Section heights\n- Padding and margins\n- Font sizes and weights\n- Colors\n- Border radius\n- Shadows\n- Responsive behavior\n\nDo not invent major sections that are not visible in the supplied design.\n\nIf exact assets are unavailable, clearly identify which assets need replacement instead of silently changing the design.\n\nWORDPRESS SAFETY:\nNever delete pages, posts, media, themes or plugins.\nNever update WordPress, Elementor, Elementor Pro, themes or plugins unless explicitly instructed.\nNever modify wp-config.php.\nNever modify the database directly unless the workflow specifically authorizes a validated Elementor operation.\n\nCURRENT TEST ENVIRONMENT:\nWebsite: REPLACE_WITH_WORDPRESS_HOST.example.com\nTest Page ID: REPLACE_WITH_TEST_PAGE_ID\nTest Page Name: Claude AI Test Page\nStatus: Draft\n\nFor the current testing phase, work only with Page ID REPLACE_WITH_TEST_PAGE_ID.\n\nWhen asked to analyze a screenshot, first describe the detected design structure and proposed Elementor structure. Do not claim that WordPress has been modified unless the workflow has actually executed the required WordPress operation."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        272,
+        0
+      ],
+      "id": "d359f5b6-91a8-4119-a0b3-f2ba2f7794dc",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_MODEL_1"
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatAnthropic",
+      "typeVersion": 1.5,
+      "position": [
+        272,
+        192
+      ],
+      "id": "413a9af0-01a5-46c9-93ac-3724c524b062",
+      "name": "Anthropic Chat Model1"
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.toolWorkflow",
+      "typeVersion": 2.2,
+      "position": [
+        432,
+        208
+      ],
+      "id": "cf7f05fd-37d9-4898-adcc-2aa3340c85a0",
+      "name": "Call n8n Workflow Tool"
+    }
+  ],
+  "connections": {
+    "Anthropic Chat Model": {
+      "ai_languageModel": [
+        []
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Anthropic Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call n8n Workflow Tool": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

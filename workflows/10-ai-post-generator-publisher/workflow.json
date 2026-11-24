@@ -1,0 +1,611 @@
+{
+  "name": "Post Generator & Publisher (Test - LLG)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "triggerAtHour": 16
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        -480,
+        -256
+      ],
+      "id": "71879271-2de1-466e-87d4-7fdcb63940bb",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "status",
+              "lookupValue": "not_used"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        -64,
+        -256
+      ],
+      "id": "05603f49-c8dd-46ae-a973-b53a47677b14",
+      "name": "Get row(s) in sheet"
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\n\nif (items.length === 0) {\n  throw new Error('هیچ موضوع \"not_used\" ای توی شیت پیدا نشد. باید ورک‌فلوی تولید ایده رو اجرا کنی.');\n}\n\n// انتخاب رندوم یکی از بین موضوعات موجود\nconst randomIndex = Math.floor(Math.random() * items.length);\nconst selected = items[randomIndex].json;\n\nreturn [{\n  json: selected\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        -256
+      ],
+      "id": "828b2c67-714a-4592-aa16-2ea7699c39e3",
+      "name": "Choose one topic"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.5-flash",
+          "mode": "list"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You are the content manager for Lucky Lion Games, a board game design studio,\nwriting a LinkedIn post for the company's official page.\n\nSTRICT RULE: Write the entire response only in English, regardless of the\nlanguage of the topic or notes below. Never use Persian or any other language.\n\nTone: professional but warm, focused on educational value for the board game\ncommunity — not direct self-promotion.\n\nRules:\n- Length: between 180 and 280 words (do not go under 180 words)\n- Hook instruction for the opening line: {{ $json.hookInstruction }}\n- STRICTLY DO NOT start the post with \"Ever felt\", \"Have you ever\", \"Imagine\",\n  or any generic rhetorical question pattern, unless explicitly instructed above.\n- End with 2-3 relevant English hashtags\n\n\nPillar: {{ $json.pillar }}\nTopic: {{ $json.topic }}\nSource notes (if any): {{ $json.source_notes }}\n\nReturn the output strictly as JSON, no Markdown, no extra explanation, in\nexactly this format:\n{\n  \"post\": \"the full post text here\",\n  \"imageQuery\": \"2-3 simple English words for a stock photo search related to the topic\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "temperature": 0.8
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        960,
+        -256
+      ],
+      "id": "fda31555-da8d-4faf-8548-321ba035dc9a",
+      "name": "Message a model"
+    },
+    {
+      "parameters": {
+        "jsCode": "const data = $input.first().json;\nconst raw = data.content?.parts?.[0]?.text;\n\nif (typeof raw !== 'string') {\n  throw new Error('متن پیدا نشد: ' + JSON.stringify(data));\n}\n\nconst cleaned = raw.replace(/```json|```/g, '').trim();\n\nlet parsed;\ntry {\n  parsed = JSON.parse(cleaned);\n} catch (e) {\n  throw new Error('پارس JSON شکست خورد: ' + cleaned);\n}\n\nconst original = $('Choose one topic').first().json; // اسم node انتخاب موضوع رو دقیق بذار\n\nreturn [{\n  json: {\n    draftText: parsed.post.trim(),\n    imageQuery: parsed.imageQuery.trim(),\n    id: original.id,\n    pillar: original.pillar,\n    topic: original.topic\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1264,
+        -256
+      ],
+      "id": "f31ca585-d2e4-4eb6-93b0-b74394c571f7",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "chatId": "REPLACE_WITH_CHATID_1",
+        "message": "=📝 پیش‌نویس پست جدید (Pillar: {{ $('Code in JavaScript').first().json.draftText }}\n\n   آیا تأیید می‌کنی منتشر بشه؟",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double"
+          }
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        320,
+        288
+      ],
+      "id": "fa8aa640-36a3-4aeb-b2ef-b4a49334b479",
+      "name": "Send message and wait for response"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "b0ccc670-4ffb-4b69-be61-cc1c0f51184f",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        560,
+        288
+      ],
+      "id": "e4d47fa4-e865-47f9-8aaa-2d1b5ba6418c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "postAs": "organization",
+        "organization": "REPLACE_WITH_ORGANIZATION_1",
+        "text": "={{ $('Code in JavaScript').first().json.draftText }}\n\nPhoto by {{ $('Code in JavaScript1').first().json.photographerName }} on Unsplash",
+        "shareMediaCategory": "IMAGE",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.linkedIn",
+      "typeVersion": 1,
+      "position": [
+        944,
+        352
+      ],
+      "id": "f2aa2cf5-7935-4412-94a4-6afe962dc6ae",
+      "name": "Create a post"
+    },
+    {
+      "parameters": {
+        "jsCode": "const results = $input.first().json.results;\n\nconst staticData = $getWorkflowStaticData('global');\nstaticData.usedPhotoIds = staticData.usedPhotoIds || [];\n\n// عکس پیش‌فرض امن، برای وقتی که هیچ نتیجه‌ای پیدا نشد\nconst fallbackPhoto = {\n  id: 'fallback',\n  urls: { regular: 'https://images.unsplash.com/photo-1610890716171-6b1bb98ffd09' },\n  user: { name: 'Unsplash', links: { html: 'https://unsplash.com' } }\n};\n\nlet available = (results || []).filter(p => !staticData.usedPhotoIds.includes(p.id));\n\nif (available.length === 0 && results && results.length > 0) {\n  // همه قبلاً استفاده شدن، برگرد به کل لیست\n  available = results;\n}\n\nconst photo = available.length > 0 ? available[Math.floor(Math.random() * available.length)] : fallbackPhoto;\n\nif (photo.id !== 'fallback') {\n  staticData.usedPhotoIds.push(photo.id);\n  if (staticData.usedPhotoIds.length > 40) {\n    staticData.usedPhotoIds.shift();\n  }\n}\n\nreturn [{\n  json: {\n    imageUrl: photo.urls.regular,\n    downloadLocation: photo.links ? photo.links.download_location : null,\n    photographerName: photo.user.name,\n    photographerLink: photo.user.links.html\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        320,
+        48
+      ],
+      "id": "da28e269-d101-45e9-ad5b-103cfec2c76d",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Code in JavaScript1').first().json.downloadLocation }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        944,
+        192
+      ],
+      "id": "d0d1fff7-3de8-481d-a913-a46def814392",
+      "name": "HTTP Request2"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.linkedin.com/rest/images?action=initializeUpload",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "linkedInOAuth2Api",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "LinkedIn-Version",
+              "value": "202506"
+            },
+            {
+              "name": "X-Restli-Protocol-Version",
+              "value": "2.0.0"
+            },
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "{\n    \"initializeUploadRequest\": {\n      \"owner\": \"urn:li:organization:ORG_ID\"\n    }\n  }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2304,
+        -96
+      ],
+      "id": "aa3a9c03-f728-4cd3-964f-2adba6fec9d9",
+      "name": "HTTP Request3"
+    },
+    {
+      "parameters": {
+        "method": "PUT",
+        "url": "={{ $json.value.uploadUrl }}",
+        "sendBody": true,
+        "contentType": "binaryData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2288,
+        144
+      ],
+      "id": "84e5a04b-4dc7-4649-a903-b6692dc98aaf",
+      "name": "HTTP Request4"
+    },
+    {
+      "parameters": {
+        "url": "https://api.unsplash.com/search/photos",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "query",
+              "value": "={{ $json.imageQuery }}"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            },
+            {
+              "name": "orientation",
+              "value": "landscape"
+            }
+          ]
+        },
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "REPLACE_WITH_API_KEY_1"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        48,
+        48
+      ],
+      "id": "a4287a10-ce73-4007-8f9f-81bce1895dbf",
+      "name": "Searching in Unsplash"
+    },
+    {
+      "parameters": {
+        "url": "={{ $('Code in JavaScript1').first().json.imageUrl }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        768,
+        272
+      ],
+      "id": "df30f767-4886-4d72-8a37-bf517d83512d",
+      "name": "Download Image"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('node');\nstaticData.attempts = (staticData.attempts || 0) + 1;\n\nreturn $input.all().map(item => ({\n  json: {\n    ...item.json,\n    attemptCount: staticData.attempts\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        144,
+        -256
+      ],
+      "id": "b36da68d-75e5-4535-bd72-ec560f02de7b",
+      "name": "Check  Attempt"
+    },
+    {
+      "parameters": {
+        "jsCode": "const staticData = $getWorkflowStaticData('node');\nstaticData.attempts = 0;\n\nreturn $input.all();"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -272,
+        -256
+      ],
+      "id": "e2815185-1095-4e28-909b-fa172e01d7d9",
+      "name": "Reset Attempt Counter"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "925bc702-31aa-40f3-b7f7-da030621ce79",
+              "leftValue": "={{ $json.attemptCount }}",
+              "rightValue": 5,
+              "operator": {
+                "type": "number",
+                "operation": "gt"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        384,
+        -432
+      ],
+      "id": "b1179b5c-2310-4ce6-93e1-b9bf6404eae8",
+      "name": "If1"
+    },
+    {
+      "parameters": {
+        "chatId": "REPLACE_WITH_CHATID_1",
+        "text": "بعد از ۳ بار تلاش، هیچ موضوعی تأیید نشد. لطفاً دستی بررسی کن.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        592,
+        -480
+      ],
+      "id": "14f13fb3-229d-4b83-bb43-18992645deb9",
+      "name": "Send a text message"
+    },
+    {
+      "parameters": {
+        "jsCode": "const hookStyles = [\n  \"Start with a bold, slightly contrarian statement that challenges a common assumption.\",\n  \"Start with a short, punchy one-line confession or observation from a designer's perspective.\",\n  \"Start with a surprising fact or number related to the topic.\",\n  \"Start with a vivid, specific mini-scene or moment (no more than one sentence).\",\n  \"Start with a direct, provocative question that is NOT phrased as 'Ever felt...' or 'Have you ever...'.\",\n  \"Start by naming a common mistake or myth directly, without any question.\"\n];\n\nconst randomStyle = hookStyles[Math.floor(Math.random() * hookStyles.length)];\n\nconst items = $input.all();\nreturn items.map(item => ({\n  json: {\n    ...item.json,\n    hookInstruction: randomStyle\n  }\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        -256
+      ],
+      "id": "1257b93f-12c3-475a-92e5-0def4f296ac5",
+      "name": "Code in JavaScript2"
+    }
+  ],
+  "connections": {
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Reset Attempt Counter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get row(s) in sheet": {
+      "main": [
+        [
+          {
+            "node": "Check  Attempt",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Choose one topic": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Searching in Unsplash",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send message and wait for response": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Download Image",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript1": {
+      "main": [
+        [
+          {
+            "node": "Send message and wait for response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request2": {
+      "main": [
+        []
+      ]
+    },
+    "HTTP Request3": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request4": {
+      "main": [
+        []
+      ]
+    },
+    "Searching in Unsplash": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download Image": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Create a post",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check  Attempt": {
+      "main": [
+        [
+          {
+            "node": "Choose one topic",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Reset Attempt Counter": {
+      "main": [
+        [
+          {
+            "node": "Get row(s) in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If1": {
+      "main": [
+        [
+          {
+            "node": "Send a text message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Code in JavaScript2": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "workflow": "Real Estate Lead Agent",
+  "nodes": 21,
+  "connections": 20,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [
+    "Power BI Push",
+    "Send Brevo Email",
+    "Send WhatsApp"
+  ],
+  "sanitization_changes": 31,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

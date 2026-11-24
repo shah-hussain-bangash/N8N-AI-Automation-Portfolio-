@@ -1,0 +1,11 @@
+{
+  "workflow": "AI Post Generator and Publisher",
+  "nodes": 19,
+  "connections": 17,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [],
+  "sanitization_changes": 26,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

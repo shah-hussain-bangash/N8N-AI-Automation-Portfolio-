@@ -1,6 +1,6 @@
 # n8n AI Automation
 
-A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns and video generation. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
+A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns, video generation, WordPress/Elementor building and social publishing. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
 
 ## Projects
 
@@ -11,8 +11,13 @@ A sequenced collection of AI-assisted lead operations, customer response workflo
 | 03 | [AI Email Reply Management](workflows/03-email-reply-management/README.md) | [JSON](workflows/03-email-reply-management/workflow.json) | 26 |
 | 04 | [WhatsApp Template Campaigns](workflows/04-whatsapp-template-campaigns/README.md) | [JSON](workflows/04-whatsapp-template-campaigns/workflow.json) | 24 |
 | 05 | [AI Video Generation and Delivery](workflows/05-ai-video-generation/README.md) | [JSON](workflows/05-ai-video-generation/workflow.json) | 27 |
+| 06 | [Google Sheets Lead CRM](workflows/06-google-sheets-lead-crm/README.md) | [JSON](workflows/06-google-sheets-lead-crm/workflow.json) | 42 |
+| 07 | [Real Estate Lead Agent](workflows/07-real-estate-lead-agent/README.md) | [JSON](workflows/07-real-estate-lead-agent/workflow.json) | 21 |
+| 08 | [WordPress Elementor Subworkflow](workflows/08-wordpress-elementor-subworkflow/README.md) | [JSON](workflows/08-wordpress-elementor-subworkflow/workflow.json) | 5 |
+| 09 | [Elementor Chat Agent](workflows/09-elementor-chat-agent/README.md) | [JSON](workflows/09-elementor-chat-agent/workflow.json) | 6 |
+| 10 | [AI Post Generator and Publisher](workflows/10-ai-post-generator-publisher/README.md) | [JSON](workflows/10-ai-post-generator-publisher/workflow.json) | 19 |
 
-The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These five workflows are independent exports; numbering does not imply automatic cross-workflow execution.
+The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These ten workflows are independent exports; numbering does not imply automatic cross-workflow execution.
 
 ## Getting started
 
@@ -20,9 +25,9 @@ Open a project README, import its workflow JSON into n8n, configure the listed c
 
 ## Publication status
 
-All five exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
+All ten exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
 
-No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the five supplied exports; it does not claim the earlier archive collections have been uploaded.
+No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the ten supplied exports; it does not claim the earlier archive collections have been uploaded.
 
 ## Repository layout
 
@@ -33,6 +38,11 @@ workflows/
   03-email-reply-management/
   04-whatsapp-template-campaigns/
   05-ai-video-generation/
+  06-google-sheets-lead-crm/
+  07-real-estate-lead-agent/
+  08-wordpress-elementor-subworkflow/
+  09-elementor-chat-agent/
+  10-ai-post-generator-publisher/
     README.md
     CONFIGURATION.md
     workflow.json

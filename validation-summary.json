@@ -60,5 +60,67 @@
     "source_configuration_placeholder_nodes": [],
     "sanitization_changes": 32,
     "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Google Sheets Lead CRM",
+    "nodes": 42,
+    "connections": 32,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [
+      "Push Data to Power BI",
+      "Send Reminder Email"
+    ],
+    "sanitization_changes": 126,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Real Estate Lead Agent",
+    "nodes": 21,
+    "connections": 20,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [
+      "Power BI Push",
+      "Send Brevo Email",
+      "Send WhatsApp"
+    ],
+    "sanitization_changes": 31,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "WordPress Elementor Subworkflow",
+    "nodes": 5,
+    "connections": 3,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 14,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "Elementor Chat Agent",
+    "nodes": 6,
+    "connections": 3,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 16,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+  },
+  {
+    "workflow": "AI Post Generator and Publisher",
+    "nodes": 19,
+    "connections": 17,
+    "active": false,
+    "graph_errors": [],
+    "missing_named_expression_references": [],
+    "source_configuration_placeholder_nodes": [],
+    "sanitization_changes": 26,
+    "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
   }
 ]

@@ -1,0 +1,3227 @@
+{
+  "name": "Complete Lead Management Automation (Google Sheets CRM)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-intake",
+        "options": {}
+      },
+      "id": "669b4854-29b6-48c5-8a9e-376d0eb2c65e",
+      "name": "Lead Webhook (HTTP)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        576,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "name",
+              "leftValue": "={{ $json.body.Name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "email",
+              "leftValue": "={{ $json.body.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "phone",
+              "leftValue": "={{ $json.body.Message }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "25350401-cfc3-4acf-9b9c-4cebcecd7d66",
+              "leftValue": "={{ $json.body.Phone }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "dc9464d2-beaf-4e29-baa1-b234a1caa3f2",
+              "leftValue": "={{ $json.body.Budget }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "419980e6-bfae-4cb1-bb9a-4571827007c8",
+              "leftValue": "={{ $json.body['Area Preference'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "0d54f62c-bd34-4183-b44d-c4f0a278de79",
+              "leftValue": "={{ $json.body.Date }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "89d92ab3-3dfb-4fbf-b5ca-cf43804e9548",
+              "leftValue": "={{ $json.body.Time }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            },
+            {
+              "id": "66d39f94-45e6-496d-8113-0218bb427e3b",
+              "leftValue": "={{ $json.body['Page URL'] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "76669bca-dfb4-4370-bc87-311fb1f5d38e",
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        816,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "={{ $('Lead Webhook (HTTP)').item.json.body.Message }}",
+        "otherOptions": {}
+      },
+      "id": "599d778b-c210-4b6e-b703-a704135fc1b0",
+      "name": "Send Error Alert (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1056,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Email",
+              "lookupValue": "={{ $('Lead Webhook (HTTP)').item.json.body.Email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "34733c75-1b0e-42cf-85d2-7b8a7e30cc4b",
+      "name": "Search Existing Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1088,
+        304
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "dup",
+              "leftValue": "={{ $json.Email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "53ec26eb-cbb3-4680-b995-14b53e4a9d44",
+      "name": "Duplicate Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1312,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Validate Required Fields').item.json.body.Email }}",
+            "Name": "={{ $('Validate Required Fields').item.json.body.Name }}",
+            "Message": "={{ \n($json.Message || '') +\n'\\n\\n[' +\n$('Lead Webhook (HTTP)').item.json.body.Date +\n' ' +\n$('Lead Webhook (HTTP)').item.json.body.Time +\n'] ' +\n$('Lead Webhook (HTTP)').item.json.body.Message\n}}",
+            "Lead Date": "={{ $('Lead Webhook (HTTP)').item.json.body.Date }}",
+            "Lead Time": "={{ $('Lead Webhook (HTTP)').item.json.body.Time }}",
+            "Mobile": "={{ $('Lead Webhook (HTTP)').item.json.body.Phone }}",
+            "Website": "={{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] }}",
+            "Budget": "={{ $('Lead Webhook (HTTP)').item.json.body.Budget }}",
+            "Area Preference": "={{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d5bb7f94-7569-43dc-9e58-877a5fa1ba4e",
+      "name": "Update Existing Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1600,
+        80
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Name": "={{ $('Validate Required Fields').item.json.body.Name }}",
+            "Mobile": "={{ $('Validate Required Fields').item.json.body.Phone }}",
+            "Email": "={{ $('Validate Required Fields').item.json.body.Email }}",
+            "Message": "={{ $('Validate Required Fields').item.json.body.Message }}",
+            "Website": "={{ $('Validate Required Fields').item.json.body['Page URL'] }}",
+            "Budget": "={{ $('Validate Required Fields').item.json.body.Budget }}",
+            "Area Preference": "={{ $('Validate Required Fields').item.json.body['Area Preference'] }}",
+            "Lead Date": "={{ $('Validate Required Fields').item.json.body.Date }}",
+            "Lead Time": "={{ $('Validate Required Fields').item.json.body.Time }}",
+            "Lead ID": "={{ $json['Lead ID'] }}",
+            "Language": "={{ $('Parse AI Classification').item.json.Language }}",
+            "Sentiment": "={{ $('Parse AI Classification').item.json.Sentiment }}",
+            "Lead Status": "=New",
+            "Assigned Team": "={{ $('Parse AI Classification').item.json.RecommendedSalesTeam }}",
+            "Assigned Sales Person": "=",
+            "Approval Status": "=Pending",
+            "Follow-up Date": "=",
+            "Last Updated": "=",
+            "Email Sent": "=",
+            "WhatsApp Sent": "=",
+            "Call Completed": "=",
+            "Investment Type": "=",
+            "Property Type": "=",
+            "ROI Interest": "="
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "e133cca1-7eed-4fee-b963-6cb73b889cd7",
+      "name": "Create New Lead",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1600,
+        288
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-4o",
+          "mode": "list"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "You are a Dubai real estate lead qualification AI.\n\nAnalyze this lead.\n\nName: {{ $json.Name }}\nEmail: {{ $json.Email }}\nMessage: {{ $json.Message }}\n\nReturn ONLY valid JSON in this format:\n\n{\n  \"lead_type\": \"\",\n  \"priority\": \"\",\n  \"lead_score\": 0,\n  \"sentiment\": \"\",\n  \"investment_interest\": \"\",\n  \"recommended_team\": \"\",\n  \"summary\": \"\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "3a586263-4e7c-4098-b19e-f6de5d633216",
+      "name": "AI Classify & Score Lead",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1072,
+        -544
+      ],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const j = item.json || {};\n  let raw = '{}';\n  if (j.output && j.output[0] && j.output[0].content && j.output[0].content[0] && j.output[0].content[0].text) {\n    raw = j.output[0].content[0].text;\n  } else if (typeof j.text === 'string') {\n    raw = j.text;\n  } else if (j.message && typeof j.message.content === 'string') {\n    raw = j.message.content;\n  }\n  let d = {};\n  try { d = JSON.parse(raw); } catch (e) { d = {}; }\n  return { json: {\n    LeadType: d.LeadType || '',\n    Budget: d.Budget || '',\n    InvestmentInterest: d.InvestmentInterest || '',\n    AreaPreference: d.AreaPreference || '',\n    Sentiment: d.Sentiment || '',\n    Priority: d.Priority || '',\n    RecommendedSalesTeam: d.RecommendedSalesTeam || '',\n    LeadScore: d.LeadScore != null ? d.LeadScore : 0,\n    ConfidenceScore: d.ConfidenceScore != null ? d.ConfidenceScore : 0,\n    AIReason: d.AIReason || ''\n  }};\n});"
+      },
+      "id": "8f2e1c7a-4868-4034-b252-658b1bd2a8b9",
+      "name": "Parse AI Classification",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1520,
+        -544
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_2",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Email"
+          ],
+          "value": {
+            "Email": "={{ $('Lead Webhook (HTTP)').item.json.body.email }}",
+            "LeadType": "={{ $json.LeadType }}",
+            "Budget": "={{ $json.Budget }}",
+            "InvestmentInterest": "={{ $json.InvestmentInterest }}",
+            "AreaPreference": "={{ $json.AreaPreference }}",
+            "Sentiment": "={{ $json.Sentiment }}",
+            "Priority": "={{ $json.Priority }}",
+            "RecommendedSalesTeam": "={{ $json.RecommendedSalesTeam }}",
+            "LeadScore": "={{ $json.LeadScore }}",
+            "ConfidenceScore": "={{ $json.ConfidenceScore }}",
+            "AIReason": "={{ $json.AIReason }}"
+          },
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LeadType",
+              "displayName": "LeadType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "InvestmentInterest",
+              "displayName": "InvestmentInterest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AreaPreference",
+              "displayName": "AreaPreference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "RecommendedSalesTeam",
+              "displayName": "RecommendedSalesTeam",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LeadScore",
+              "displayName": "LeadScore",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ConfidenceScore",
+              "displayName": "ConfidenceScore",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AIReason",
+              "displayName": "AIReason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7aa5e67d-b1a5-4351-945c-c0ae8a6f150d",
+      "name": "Save AI Data to Google Sheets",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1872,
+        -528
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "gpt-4o"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Draft a personalized outreach message for this real estate lead.\n\nReturn JSON only in this format:\n{\n  \"Subject\": \"\",\n  \"EmailDraft\": \"\",\n  \"WhatsAppDraft\": \"\"\n}\n\nLead Details:\nName: {{ $json.Name }}\nEmail: {{ $json.Email }}\nMessage: {{ $json.Message }}\n\nInstructions:\n- Personalize the response using the lead's name.\n- Acknowledge the lead's message.\n- Invite the lead to discuss Dubai real estate investment opportunities.\n- Keep the email professional and friendly.\n- Keep the WhatsApp message under 80 words.\n- Return only valid JSON."
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {
+          "instructions": "You are a real-estate sales assistant. Respond with a strict JSON object containing: EmailDraft, WhatsAppDraft, Subject, PersonalisedMessage, BrochureSuggestion, ProjectSuggestion.",
+          "textFormat": {
+            "textOptions": {
+              "type": "json_object"
+            }
+          }
+        }
+      },
+      "id": "234085c4-1687-4b47-b638-a7671e29059c",
+      "name": "AI Generate Draft",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        1872,
+        192
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "const webhook = $('Lead Webhook (HTTP)').first().json.body || {};\nconst items = $input.all();\n\nreturn items.map(item => {\n  const j = item.json || {};\n\n  let aiData =\n    j.output?.[0]?.content?.[0]?.text ??\n    j.text ??\n    j.message?.content ??\n    {};\n\n  // Parse AI response if it is returned as text\n  if (typeof aiData === 'string') {\n    aiData = aiData\n      .replace(/```json/gi, '')\n      .replace(/```/g, '')\n      .trim();\n\n    try {\n      aiData = JSON.parse(aiData);\n    } catch (error) {\n      aiData = {};\n    }\n  }\n\n  return {\n    json: {\n      Name:\n        webhook.Name ||\n        webhook.name ||\n        '',\n\n      Email:\n        webhook.Email ||\n        webhook.email ||\n        '',\n\n      Message:\n        webhook.Message ||\n        webhook.message ||\n        '',\n\n      'AI Budget':\n        aiData['AI Budget'] ||\n        aiData.AIBudget ||\n        aiData.Budget ||\n        '',\n\n      Phone:\n        webhook.Phone ||\n        webhook.phone ||\n        webhook.Mobile ||\n        webhook.mobile ||\n        '',\n\n      'AI Area Preference':\n        aiData['AI Area Preference'] ||\n        aiData.AIAreaPreference ||\n        aiData.AreaPreference ||\n        '',\n\n      'Date Received':\n        webhook['Date Received'] ||\n        webhook.Date ||\n        webhook.date ||\n        new Date().toLocaleDateString('en-GB', {\n          timeZone: 'Asia/Dubai'\n        }),\n\n      'Time Received':\n        webhook['Time Received'] ||\n        webhook.Time ||\n        webhook.time ||\n        new Date().toLocaleTimeString('en-US', {\n          timeZone: 'Asia/Dubai',\n          hour: '2-digit',\n          minute: '2-digit',\n          hour12: true\n        }),\n\n      'Page URL':\n        webhook['Page URL'] ||\n        webhook.PageURL ||\n        webhook.page_url ||\n        webhook.url ||\n        '',\n\n      Subject:\n        aiData.Subject ||\n        'Your property enquiry',\n\n      EmailDraft:\n        aiData.EmailDraft ||\n        '',\n\n      WhatsAppDraft:\n        aiData.WhatsAppDraft ||\n        ''\n    }\n  };\n});"
+      },
+      "id": "fff84a73-b4f1-44cd-8d40-f6c22bd8b99d",
+      "name": "Parse AI Draft",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2240,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "text": "=🚨 New Lead Received  Name: {{$json.Name}} Email: {{$json.Email}} Message: {{$json.Message}}  Subject: {{$json.Subject}}  Email Draft: {{$json.EmailDraft}}  WhatsApp Draft: {{$json.WhatsAppDraft}}",
+        "otherOptions": {}
+      },
+      "id": "99b94682-3446-43c3-a04b-227240d6f374",
+      "name": "Post Lead Summary (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2464,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_CHANNELID_1",
+          "mode": "id"
+        },
+        "message": "=Please review this lead and the AI-generated draft.\n\n👤 Lead Name:\n{{ $('Parse AI Draft').item.json.Name }}\n\n📧 Email:\n{{ $('Parse AI Draft').item.json.Email }}\n\n💬 Customer Message:\n{{ $('Parse AI Draft').item.json.Message }}\n\n📌 Subject:\n{{ $('Parse AI Draft').item.json.Subject }}\n\n📧 Email Draft:\n{{ $('Parse AI Draft').item.json.EmailDraft }}\n\n📱 WhatsApp Draft:\n{{ $('Parse AI Draft').item.json.WhatsAppDraft }}\n\nPlease approve or reject this response.",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "Reject"
+          }
+        },
+        "options": {}
+      },
+      "id": "94f89303-bd42-4c1e-8d35-e9dc33a16b0f",
+      "name": "Sales Manager Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2688,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "appr",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "5879ba83-d33f-412d-936a-ba135bfa7dc8",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2912,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_2"
+        },
+        "text": "=:leftwards_arrow_with_hook: *Lead returned for further review*\nLead: {{ $('Lead Webhook (HTTP)').item.json.body.name }} ({{ $('Lead Webhook (HTTP)').item.json.body.email }})\nReason: Rejected by Sales Manager. Please update required info and re-assign if needed.",
+        "otherOptions": {}
+      },
+      "id": "be2f3f42-ba93-455c-bcbe-aea54500efa8",
+      "name": "Return to Sales Team (Slack)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3136,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_3"
+        },
+        "text": "=:memo: A lead requires manual follow-up: {{ $('Lead Webhook (HTTP)').item.json.body.name }}",
+        "otherOptions": {}
+      },
+      "id": "c9191625-94bd-4dab-b660-b5c8edb289dd",
+      "name": "Notify Sales Team (Rejected)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        3360,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "82dee698-9fb0-4541-85c3-ee51244c06c1",
+              "name": "AssignedSalesPerson",
+              "value": "Dubai Investment Team",
+              "type": "string"
+            },
+            {
+              "id": "324ec13e-4182-4275-bac9-9ff865316691",
+              "name": "AssignedBasedOn",
+              "value": "Sales Manager Approval",
+              "type": "string"
+            },
+            {
+              "id": "9f6f8fe0-0f4e-4d91-a43d-92ca13c11749",
+              "name": "LeadStatus",
+              "value": "Approved",
+              "type": "string"
+            },
+            {
+              "id": "e3673d88-9fcc-4a9b-9909-c38cf624049a",
+              "name": "ApprovedAt",
+              "value": "={{ $json.data.respondedAt }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "60458ef2-3c4d-4367-92c8-2012d1bc2e95",
+      "name": "Assign Lead",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3136,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $('Parse AI Draft').item.json.Subject }}",
+        "textContent": "={{ $('Parse AI Draft').item.json.EmailDraft }}",
+        "sender": "REPLACE_WITH_EMAIL_1@example.com",
+        "receipients": "={{ $('Parse AI Draft').item.json.Email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "a1bbfa81-e99b-4ce4-8d88-f679042fe6d4",
+      "name": "Send Email (Brevo)",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        3360,
+        192
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "id": "02a5304c-2c90-4da9-a17d-60a998ee2769",
+      "name": "Merge Comms",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        3584,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $('Validate Required Fields').item.json.body.Phone }}",
+        "template": "hello_world|en_US"
+      },
+      "id": "b6d666ec-3e19-4062-a766-fa8c5c8b96a1",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        3360,
+        384
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "t1",
+              "name": "EmailSent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "t2",
+              "name": "WhatsAppSent",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "t3",
+              "name": "DeliveryStatus",
+              "value": "Delivered",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4c11a614-efb6-4558-9b7e-4b0e515a4df2",
+      "name": "Track Delivery Status",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        3808,
+        288
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Lead Webhook (HTTP)').item.json.body.Email }}",
+            "Lead Date": "={{ $('Lead Webhook (HTTP)').item.json.body.Date }}",
+            "Lead Time": "={{ $('Lead Webhook (HTTP)').item.json.body.Time }}",
+            "Name": "={{ $('Lead Webhook (HTTP)').item.json.body.Name }}",
+            "Mobile": "={{ $('Lead Webhook (HTTP)').item.json.body.Phone }}",
+            "Message": "={{ $('Lead Webhook (HTTP)').item.json.body.Message }}",
+            "Website": "={{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] }}",
+            "Budget": "={{ $('Lead Webhook (HTTP)').item.json.body.Budget }}",
+            "Area Preference": "={{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "cea3b83c-a699-48a8-ba5c-152a155a284f",
+      "name": "Update Google Sheets (Contacted)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4032,
+        288
+      ],
+      "executeOnce": true,
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<__PLACEHOLDER_VALUE__Power BI streaming dataset push URL__>",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify([{\n  \"Lead ID\": $(\"Lead Webhook (HTTP)\").item.json.body.leadId,\n  \"Lead Date\": $now.toFormat(\"yyyy-MM-dd\"),\n  \"Lead Time\": $now.toFormat(\"HH:mm:ss\"),\n  \"Name\": $(\"Lead Webhook (HTTP)\").item.json.body.name,\n  \"Mobile\": $(\"Lead Webhook (HTTP)\").item.json.body.mobile,\n  \"Email\": $(\"Lead Webhook (HTTP)\").item.json.body.email,\n  \"Message\": $(\"Lead Webhook (HTTP)\").item.json.body.message,\n  \"Source\": $(\"Lead Webhook (HTTP)\").item.json.body.source,\n  \"Campaign\": $(\"Lead Webhook (HTTP)\").item.json.body.campaign,\n  \"Platform\": $(\"Lead Webhook (HTTP)\").item.json.body.platform,\n  \"Website\": $(\"Lead Webhook (HTTP)\").item.json.body.website,\n  \"AI Priority\": $(\"Parse AI Classification\").item.json.Priority,\n  \"AI Lead Score\": $(\"Parse AI Classification\").item.json.LeadScore,\n  \"AI Lead Type\": $(\"Parse AI Classification\").item.json.LeadType,\n  \"Budget\": $(\"Parse AI Classification\").item.json.Budget,\n  \"Area Preference\": $(\"Parse AI Classification\").item.json.AreaPreference,\n  \"Language\": $(\"Parse AI Classification\").item.json.Language,\n  \"Sentiment\": $(\"Parse AI Classification\").item.json.Sentiment,\n  \"Lead Status\": \"Contacted\",\n  \"Assigned Team\": $(\"Assign Lead\").item.json.AssignedTeam,\n  \"Assigned Sales Person\": $(\"Assign Lead\").item.json.AssignedSalesPerson,\n  \"Approval Status\": \"Pending\",\n  \"Follow-up Date\": \"\",\n  \"Last Updated\": $now.toISO(),\n  \"Email Sent\": \"No\",\n  \"WhatsApp Sent\": \"No\",\n  \"Call Completed\": \"No\",\n  \"Investment Type\": $(\"Parse AI Classification\").item.json.InvestmentType,\n  \"Property Type\": $(\"Parse AI Classification\").item.json.PropertyType,\n  \"ROI Interest\": $(\"Parse AI Classification\").item.json.ROIInterest\n}]) }}{{ JSON.stringify([{\n  \"Lead ID\": $(\"Lead Webhook (HTTP)\").item.json.body.leadId,\n  \"Lead Date\": $now.toFormat(\"yyyy-MM-dd\"),\n  \"Lead Time\": $now.toFormat(\"HH:mm:ss\"),\n  \"Name\": $(\"Lead Webhook (HTTP)\").item.json.body.name,\n  \"Mobile\": $(\"Lead Webhook (HTTP)\").item.json.body.mobile,\n  \"Email\": $(\"Lead Webhook (HTTP)\").item.json.body.email,\n  \"Message\": $(\"Lead Webhook (HTTP)\").item.json.body.message,\n  \"Source\": $(\"Lead Webhook (HTTP)\").item.json.body.source,\n  \"Campaign\": $(\"Lead Webhook (HTTP)\").item.json.body.campaign,\n  \"Platform\": $(\"Lead Webhook (HTTP)\").item.json.body.platform,\n  \"Website\": $(\"Lead Webhook (HTTP)\").item.json.body.website,\n  \"AI Priority\": $(\"Parse AI Classification\").item.json.Priority,\n  \"AI Lead Score\": $(\"Parse AI Classification\").item.json.LeadScore,\n  \"AI Lead Type\": $(\"Parse AI Classification\").item.json.LeadType,\n  \"Budget\": $(\"Parse AI Classification\").item.json.Budget,\n  \"Area Preference\": $(\"Parse AI Classification\").item.json.AreaPreference,\n  \"Language\": $(\"Parse AI Classification\").item.json.Language,\n  \"Sentiment\": $(\"Parse AI Classification\").item.json.Sentiment,\n  \"Lead Status\": \"Contacted\",\n  \"Assigned Team\": $(\"Assign Lead\").item.json.AssignedTeam,\n  \"Assigned Sales Person\": $(\"Assign Lead\").item.json.AssignedSalesPerson,\n  \"Approval Status\": \"Pending\",\n  \"Follow-up Date\": \"\",\n  \"Last Updated\": $now.toISO(),\n  \"Email Sent\": \"No\",\n  \"WhatsApp Sent\": \"No\",\n  \"Call Completed\": \"No\",\n  \"Investment Type\": $(\"Parse AI Classification\").item.json.InvestmentType,\n  \"Property Type\": $(\"Parse AI Classification\").item.json.PropertyType,\n  \"ROI Interest\": $(\"Parse AI Classification\").item.json.ROIInterest\n}]) }}",
+        "options": {}
+      },
+      "id": "75944299-521a-4ec4-8251-653e22484883",
+      "name": "Push Data to Power BI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        4304,
+        -320
+      ],
+      "retryOnFail": true,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Lead Date": "={{ $('Lead Webhook (HTTP)').item.json.body.Date }}",
+            "Lead Time": "={{ $('Lead Webhook (HTTP)').item.json.body.Time }}",
+            "Name": "={{ $('Lead Webhook (HTTP)').item.json.body.Name }}",
+            "Mobile": "={{ $('Lead Webhook (HTTP)').item.json.body.Phone }}",
+            "Email": "={{ $('Lead Webhook (HTTP)').item.json.body.Email }}",
+            "Message": "={{ $('Lead Webhook (HTTP)').item.json.body.Message }}",
+            "Website": "={{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] }}",
+            "Budget": "={{ $('Lead Webhook (HTTP)').item.json.body.Budget }}",
+            "Area Preference": "={{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "703005a4-64f6-4727-bb14-9336977647b4",
+      "name": "Log & Audit Trail",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4272,
+        288
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "resume": "specificTime",
+        "dateTime": "={{ $now.plus({ days: 3 }).toISO() }}"
+      },
+      "id": "cbb51e7e-7350-4188-ae68-471fe38d59ba",
+      "name": "Wait Until Follow-up Date",
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        4496,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "id": "6186fae1-dad1-4f0e-9a57-58cc10f9245e",
+      "name": "Check Response Status",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        4736,
+        288
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "rep",
+              "leftValue": "={{ $json.ReplyStatus }}",
+              "rightValue": "Replied",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "08acd2f9-78c7-48b9-9b8a-dc168ed67e24",
+      "name": "Customer Replied?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        4976,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Lead Webhook (HTTP)').item.json.body.Email }}",
+            "Lead Date": "={{ $('Lead Webhook (HTTP)').item.json.body.Date }}",
+            "Lead Time": "={{ $('Lead Webhook (HTTP)').item.json.body.Time }}",
+            "Name": "={{ $('Lead Webhook (HTTP)').item.json.body.Name }}",
+            "Mobile": "={{ $('Lead Webhook (HTTP)').item.json.body.Phone }}",
+            "Message": "={{ $('Lead Webhook (HTTP)').item.json.body.Message }}",
+            "Website": "={{ $('Lead Webhook (HTTP)').item.json.body['Page URL'] }}",
+            "Budget": "={{ $('Lead Webhook (HTTP)').item.json.body.Budget }}",
+            "Area Preference": "={{ $('Lead Webhook (HTTP)').item.json.body['Area Preference'] }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Lead ID",
+              "displayName": "Lead ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Date",
+              "displayName": "Lead Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Time",
+              "displayName": "Lead Time",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Name",
+              "displayName": "Name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Mobile",
+              "displayName": "Mobile",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Message",
+              "displayName": "Message",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Source",
+              "displayName": "Source",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Campaign",
+              "displayName": "Campaign",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Platform",
+              "displayName": "Platform",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Website",
+              "displayName": "Website",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Priority",
+              "displayName": "AI Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Lead Score",
+              "displayName": "AI Lead Score",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "AI Lead Type",
+              "displayName": "AI Lead Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Area Preference",
+              "displayName": "Area Preference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Language",
+              "displayName": "Language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Lead Status",
+              "displayName": "Lead Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assigned Team",
+              "displayName": "Assigned Team",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Assigned Sales Person",
+              "displayName": "Assigned Sales Person",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Approval Status",
+              "displayName": "Approval Status",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Follow-up Date",
+              "displayName": "Follow-up Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Last Updated",
+              "displayName": "Last Updated",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Email Sent",
+              "displayName": "Email Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "WhatsApp Sent",
+              "displayName": "WhatsApp Sent",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Call Completed",
+              "displayName": "Call Completed",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Investment Type",
+              "displayName": "Investment Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Property Type",
+              "displayName": "Property Type",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "ROI Interest",
+              "displayName": "ROI Interest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "d584fe7b-6c21-4d27-942f-d6d5cc98b496",
+      "name": "Update Status (Interested/Meeting)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5216,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "=Following up — {{ $('Parse AI Draft').item.json.Subject }}",
+        "textContent": "=Hi {{ $('Lead Webhook (HTTP)').item.json.body.name }}, just following up on my previous message. {{ $('Parse AI Draft').item.json.PersonalisedMessage }}",
+        "sender": "<__PLACEHOLDER_VALUE__Sender email/name for Brevo__>",
+        "receipients": "={{ $('Lead Webhook (HTTP)').item.json.body.email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "0d129bac-6b00-4468-bdac-e97f80069070",
+      "name": "Send Reminder Email",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        5216,
+        368
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $('Lead Webhook (HTTP)').item.json.body.phone }}",
+        "textBody": "=Hi {{ $('Lead Webhook (HTTP)').item.json.body.name }}, following up on your property enquiry — happy to help whenever you're ready!",
+        "additionalFields": {}
+      },
+      "id": "2b37d296-823f-4cf1-9166-4e382087ab36",
+      "name": "Send Reminder WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        5424,
+        368
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_1",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Task": "Call lead — no response to follow-up",
+            "Lead": "={{ $('Lead Webhook (HTTP)').item.json.body.name }}",
+            "Email": "={{ $('Lead Webhook (HTTP)').item.json.body.email }}",
+            "Phone": "={{ $('Lead Webhook (HTTP)').item.json.body.phone }}",
+            "AssignedSalesPerson": "={{ $('Assign Lead').item.json.AssignedSalesPerson }}",
+            "CreatedDate": "={{ $now.toISO() }}"
+          },
+          "schema": [
+            {
+              "id": "Task",
+              "displayName": "Task",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Lead",
+              "displayName": "Lead",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Phone",
+              "displayName": "Phone",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "AssignedSalesPerson",
+              "displayName": "AssignedSalesPerson",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "CreatedDate",
+              "displayName": "CreatedDate",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "9f2389d6-1567-42b4-be14-268e557c2205",
+      "name": "Create Call Task (in Sheet)",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        5616,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "select": "user",
+        "user": {
+          "__rl": true,
+          "value": "REPLACE_WITH_USER_1",
+          "mode": "id"
+        },
+        "text": "=:telephone_receiver: No response from {{ $('Lead Webhook (HTTP)').item.json.body.name }}. A call task has been created — please follow up.",
+        "otherOptions": {}
+      },
+      "id": "79a29a05-c7f7-425a-84da-94adcdcc44d4",
+      "name": "Notify Sales Team (Follow-up)",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        5824,
+        368
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "92dabb77-8a41-4c9a-88f5-c299d3517d7b",
+      "name": "Repeat Until Response / Stop",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        6016,
+        368
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 1. LEAD SOURCES\nWordPress Forms, Facebook Leads, Bayut, Property Finder, Manual (Backend Form) all POST to the Webhook Trigger below.",
+        "height": 200,
+        "width": 300
+      },
+      "id": "e051e987-1ed0-4e30-b901-0c9b5c11f2db",
+      "name": "Sticky Note e051e987",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        80,
+        -512
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 5-7. AI CLASSIFICATION, SCORING & DRAFT (OpenAI / GPT)\nClassify & score the lead, save AI data to Sheets, then generate personalised Email + WhatsApp drafts with brochure/project suggestions.",
+        "height": 200,
+        "width": 300
+      },
+      "id": "32e8ff39-f7e6-4561-abbb-18c9dd365d5d",
+      "name": "Sticky Note 32e8ff39",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -272,
+        -512
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 11-13. COMMUNICATION, UPDATE & POWER BI\nSend approved Email (Brevo) + WhatsApp, track delivery, mark lead Contacted in Sheets, and push data to Power BI. (18. KPI & Analytics dashboards are built in Power BI on this data.)",
+        "height": 200,
+        "width": 300
+      },
+      "id": "e0da0215-bb12-4d86-95b1-7e5efc1955b5",
+      "name": "Sticky Note e0da0215",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -272
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 14. FOLLOW-UP AUTOMATION\nWait until follow-up date, check response. If replied → mark Interested/Meeting. If not → reminder Email + WhatsApp, create call task, notify sales, repeat until response or stop.",
+        "height": 200,
+        "width": 300
+      },
+      "id": "f4b1e893-5c8a-4df0-9693-c85dbf712226",
+      "name": "Sticky Note f4b1e893",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -640,
+        -528
+      ]
+    },
+    {
+      "parameters": {
+        "content": "## 15-19. ERROR HANDLING, LOGGING, ASSIGNMENT, ANALYTICS & BENEFITS\n- 15. Error handling is a separate Error Workflow (Lead Management — Error Handler): retries 3x, logs errors, notifies admin.\n- 16. Logging & Audit trail -> Logs sheet.\n- 17. Lead Assignment (optional) -> Assign Lead node (area/budget/language/workload).\n- 18. KPI & Analytics -> Power BI dashboards.\n- 19. Benefits: 100% automated, AI classification, real-time notifications, multi-channel, accurate CRM data, scalable & reliable.",
+        "height": 200,
+        "width": 300
+      },
+      "id": "17c37a1a-2586-46fc-882a-5085b5ff1984",
+      "name": "Sticky Note 17c37a1a",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -288,
+        -256
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "REPLACE_WITH_DOCUMENTID_1",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "REPLACE_WITH_SHEETNAME_2",
+          "mode": "id"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Email": "={{ $('Update Existing Lead').item.json.Email }}"
+          },
+          "matchingColumns": [
+            "Email"
+          ],
+          "schema": [
+            {
+              "id": "Email",
+              "displayName": "Email",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "LeadType",
+              "displayName": "LeadType",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Budget",
+              "displayName": "Budget",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "InvestmentInterest",
+              "displayName": "InvestmentInterest",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AreaPreference",
+              "displayName": "AreaPreference",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Sentiment",
+              "displayName": "Sentiment",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "Priority",
+              "displayName": "Priority",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "RecommendedSalesTeam",
+              "displayName": "RecommendedSalesTeam",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "LeadScore",
+              "displayName": "LeadScore",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "ConfidenceScore",
+              "displayName": "ConfidenceScore",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "AIReason",
+              "displayName": "AIReason",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "5fccf54c-0d20-4404-b8ed-2198a5d004fe",
+      "name": "Save AI Data to Google Sheets1",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        1888,
+        -288
+      ],
+      "retryOnFail": true
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const j = item.json || {};\n  let raw = '{}';\n\n  if (j.output && j.output[0] && j.output[0].content && j.output[0].content[0] && j.output[0].content[0].text) {\n    raw = j.output[0].content[0].text;\n  } else if (typeof j.text === 'string') {\n    raw = j.text;\n  } else if (j.message && typeof j.message.content === 'string') {\n    raw = j.message.content;\n  }\n\n  let d = {};\n  try {\n    d = JSON.parse(raw);\n  } catch (e) {\n    d = {};\n  }\n\n  return {\n    json: {\n      Name: d.Name || '',\n      Email: d.Email || '',\n      Message: d.Message || ''\n    }\n  };\n});"
+      },
+      "id": "aedd213c-2a9e-4b58-ac0b-ab567c961ac8",
+      "name": "Parse AI Classification1",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1632,
+        -288
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "0688be50-9958-4e3e-993f-5e6f9bc1bb1e",
+              "name": "Lead ID",
+              "value": "={{ 'L-' + $now.toFormat('yyyyMMddHHmmssSSS') }}",
+              "type": "string"
+            }
+          ]
+        },
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1344,
+        352
+      ],
+      "id": "bf6ce1fb-ea1d-4e60-923a-d48dbcd2946d",
+      "name": "Generate Lead ID"
+    }
+  ],
+  "connections": {
+    "Lead Webhook (HTTP)": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Search Existing Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Error Alert (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Existing Lead": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Found?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Generate Lead ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Existing Lead": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create New Lead": {
+      "main": [
+        [
+          {
+            "node": "AI Generate Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classify & Score Lead": {
+      "main": [
+        []
+      ]
+    },
+    "Parse AI Classification": {
+      "main": [
+        []
+      ]
+    },
+    "Save AI Data to Google Sheets": {
+      "main": [
+        []
+      ]
+    },
+    "AI Generate Draft": {
+      "main": [
+        [
+          {
+            "node": "Parse AI Draft",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse AI Draft": {
+      "main": [
+        [
+          {
+            "node": "Post Lead Summary (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Lead Summary (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Sales Manager Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Sales Manager Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Assign Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return to Sales Team (Slack)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Return to Sales Team (Slack)": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team (Rejected)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Lead": {
+      "main": [
+        [
+          {
+            "node": "Send Email (Brevo)",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Email (Brevo)": {
+      "main": [
+        [
+          {
+            "node": "Merge Comms",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge Comms": {
+      "main": [
+        [
+          {
+            "node": "Track Delivery Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Merge Comms",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Track Delivery Status": {
+      "main": [
+        [
+          {
+            "node": "Update Google Sheets (Contacted)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Google Sheets (Contacted)": {
+      "main": [
+        [
+          {
+            "node": "Log & Audit Trail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Push Data to Power BI": {
+      "main": [
+        []
+      ]
+    },
+    "Log & Audit Trail": {
+      "main": [
+        [
+          {
+            "node": "Wait Until Follow-up Date",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait Until Follow-up Date": {
+      "main": [
+        [
+          {
+            "node": "Check Response Status",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Response Status": {
+      "main": [
+        [
+          {
+            "node": "Customer Replied?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Customer Replied?": {
+      "main": [
+        [
+          {
+            "node": "Update Status (Interested/Meeting)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Reminder Email",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder Email": {
+      "main": [
+        [
+          {
+            "node": "Send Reminder WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Reminder WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Create Call Task (in Sheet)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Call Task (in Sheet)": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Team (Follow-up)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Notify Sales Team (Follow-up)": {
+      "main": [
+        [
+          {
+            "node": "Repeat Until Response / Stop",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save AI Data to Google Sheets1": {
+      "main": [
+        []
+      ]
+    },
+    "Parse AI Classification1": {
+      "main": [
+        []
+      ]
+    },
+    "Generate Lead ID": {
+      "main": [
+        [
+          {
+            "node": "Create New Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

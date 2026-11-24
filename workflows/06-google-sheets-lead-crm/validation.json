@@ -1,0 +1,14 @@
+{
+  "workflow": "Google Sheets Lead CRM",
+  "nodes": 42,
+  "connections": 32,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [
+    "Push Data to Power BI",
+    "Send Reminder Email"
+  ],
+  "sanitization_changes": 126,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

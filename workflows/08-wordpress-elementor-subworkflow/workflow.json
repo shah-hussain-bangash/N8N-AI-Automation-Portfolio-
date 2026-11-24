@@ -1,0 +1,177 @@
+{
+  "name": "WordPress Elementor Builder",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "page_title"
+            },
+            {
+              "name": "page_slug"
+            },
+            {
+              "name": "page_status"
+            },
+            {
+              "name": "elementor_data",
+              "type": "array"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -16,
+        0
+      ],
+      "id": "7026840a-0cbe-47f0-ae0c-6901b359fed5",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "https://REPLACE_WITH_WORDPRESS_HOST.example.com/wp-json/wp/v2/users/me",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "532b85c2-1f0f-41c3-9223-2d403314be64",
+      "name": "WordPress – Connection Test"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_WORDPRESS_HOST.example.com/wp-json/wp/v2/pages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "title",
+              "value": "={{ $('When Executed by Another Workflow').item.json.page_title }}"
+            },
+            {
+              "name": "status",
+              "value": "={{ $('When Executed by Another Workflow').item.json.page_status }}"
+            },
+            {
+              "name": "content",
+              "value": "This is a test page created automatically by n8n."
+            },
+            {
+              "name": "slug",
+              "value": "={{ $('When Executed by Another Workflow').item.json.page_slug }}"
+            },
+            {
+              "name": "template",
+              "value": "elementor_canvas"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        480,
+        0
+      ],
+      "id": "0e36dbe0-124c-4a8c-9e84-3ef665c182c2",
+      "name": "HTTP Request"
+    },
+    {
+      "parameters": {
+        "url": "https://REPLACE_WITH_WORDPRESS_HOST.example.com/wp-json/wp/v2/pages/REPLACE_WITH_PAGE_ID?context=edit",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1136,
+        -16
+      ],
+      "id": "50f1583e-23dc-48d7-8520-4f96cd66c527",
+      "name": "WordPress – Connection Test1"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://REPLACE_WITH_WORDPRESS_HOST.example.com/wp-json/zenith-n8n/v1/elementor/save",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpBasicAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "page_id",
+              "value": "={{ $json.id }}"
+            },
+            {
+              "name": "elementor_data",
+              "value": "={{ JSON.stringify($('When Executed by Another Workflow').first().json.elementor_data) }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        704,
+        0
+      ],
+      "id": "8d34e26a-4b77-4d9f-8fe6-1ba5d30cffe3",
+      "name": "HTTP Request1"
+    }
+  ],
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "WordPress – Connection Test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "WordPress – Connection Test": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "HTTP Request": {
+      "main": [
+        [
+          {
+            "node": "HTTP Request1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

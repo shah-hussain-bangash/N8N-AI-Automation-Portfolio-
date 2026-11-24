@@ -1,0 +1,663 @@
+{
+  "name": "Real Estate Lead Automation",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-lead",
+        "options": {}
+      },
+      "id": "32045e9d-14e2-4e35-ba2b-f64524d24e76",
+      "name": "Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        0,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-name",
+              "leftValue": "={{ $json.body.name }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            },
+            {
+              "id": "has-email",
+              "leftValue": "={{ $json.body.email }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "4264f555-1161-44d8-b221-968435ab2c7b",
+      "name": "Validate Required Fields",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        224,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "limit": 1,
+        "filters": {
+          "filter": [
+            {
+              "fieldName": "email_from",
+              "value": "={{ $json.body.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "3801b564-404c-4e20-a588-09a568237120",
+      "name": "Duplicate Lead Check",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        432,
+        64
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-id",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "c1f1bc01-624c-496a-b475-9911d29ed5c8",
+      "name": "Duplicate Found?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        144
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.id }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "description": "=Duplicate inbound lead re-engaged from {{ $('Lead Webhook').item.json.body.source }} on {{ $now.toISO() }}"
+          }
+        }
+      },
+      "id": "2efc9da1-c07c-4902-9fcc-2874180d0ac6",
+      "name": "Update Existing Lead",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        960,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Classify this real-estate lead.\nName: {{ $('Lead Webhook').item.json.body.name }}\nSource: {{ $('Lead Webhook').item.json.body.source }}\nBudget: {{ $('Lead Webhook').item.json.body.budget }}\nMessage: {{ $('Lead Webhook').item.json.body.message }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a real-estate CRM analyst. Return lead type, budget, investment interest, priority, area preference, sentiment, and the recommended sales team."
+        }
+      },
+      "id": "ee5efd67-d9bc-4bf6-9ce1-4380c90d50ad",
+      "name": "AI Classification",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        896,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_MODEL_1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "8edba056-c16a-4e4d-a33b-fe349d4ebb8d",
+      "name": "Classification Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        752,
+        464
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"leadType\":\"Buyer\",\"budget\":\"1.8M AED\",\"investmentInterest\":\"High\",\"priority\":\"High\",\"areaPreference\":\"Dubai Marina\",\"sentiment\":\"Positive\",\"recommendedSalesTeam\":\"Residential Sales\"}"
+      },
+      "id": "8bea244b-02c5-493b-81a4-959f85b281cc",
+      "name": "Classification Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1120,
+        480
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Write a personalized email and a WhatsApp reply for this lead.\nName: {{ $('Lead Webhook').item.json.body.name }}\nLead Type: {{ $('AI Classification').item.json.output.leadType }}\nArea: {{ $('AI Classification').item.json.output.areaPreference }}\nBudget: {{ $('AI Classification').item.json.output.budget }}\nSentiment: {{ $('AI Classification').item.json.output.sentiment }}",
+        "hasOutputParser": true,
+        "options": {
+          "systemMessage": "You are a real-estate sales assistant. Draft a warm, professional email (subject + body) and a concise WhatsApp reply personalized to the lead."
+        }
+      },
+      "id": "f0eb98cd-6d4d-4571-9261-d0f05af353b6",
+      "name": "AI Draft Response",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        1248,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_MODEL_1"
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "id": "4cb77281-907e-4b53-a3e3-748100941bc4",
+      "name": "Draft Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "typeVersion": 1.3,
+      "position": [
+        1264,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "jsonSchemaExample": "{\"emailSubject\":\"Your Dubai Marina property enquiry\",\"emailBody\":\"Dear Ahmed, thank you for your interest...\",\"whatsappMessage\":\"Hi Ahmed, thanks for reaching out about Dubai Marina...\"}"
+      },
+      "id": "0b88302c-b902-4b5d-af6e-15a30386889b",
+      "name": "Draft Schema",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "typeVersion": 1.3,
+      "position": [
+        1392,
+        528
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "channel",
+        "operation": "get",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_1"
+        },
+        "options": {}
+      },
+      "id": "c5689caf-3196-433d-8a75-c9e26b150e56",
+      "name": "Slack Lead Summary",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1600,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "sendAndWait",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_2"
+        },
+        "message": "=Approve outreach for {{ $('Lead Webhook').item.json.body.name }}?\n\nEmail subject: {{ $('AI Draft Response').item.json.output.emailSubject }}\n\nEmail:\n{{ $('AI Draft Response').item.json.output.emailBody }}\n\nWhatsApp:\n{{ $('AI Draft Response').item.json.output.whatsappMessage }}",
+        "approvalOptions": {
+          "values": {
+            "approvalType": "double",
+            "disapproveLabel": "Reject"
+          }
+        },
+        "options": {}
+      },
+      "id": "39ddde98-58e1-400a-914e-812567e0fbdd",
+      "name": "Human Approval",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1824,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "approved",
+              "leftValue": "={{ $json.data.approved }}",
+              "rightValue": true,
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4ba9fb63-7718-4af9-8dbf-3fac80470b7d",
+      "name": "Approved?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2048,
+        304
+      ]
+    },
+    {
+      "parameters": {
+        "subject": "={{ $('AI Draft Response').item.json.output.emailSubject }}",
+        "textContent": "={{ $('AI Draft Response').item.json.output.emailBody }}",
+        "sender": "<__PLACEHOLDER_VALUE__Sender email (e.g. REPLACE_WITH_EMAIL_1@example.com)__>",
+        "receipients": "={{ $('Lead Webhook').item.json.body.email }}",
+        "additionalFields": {},
+        "requestOptions": {}
+      },
+      "id": "61adfd5b-e4b8-48b0-bb7a-331f5a942a3a",
+      "name": "Send Brevo Email",
+      "type": "n8n-nodes-base.sendInBlue",
+      "typeVersion": 1,
+      "position": [
+        2272,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<__PLACEHOLDER_VALUE__WhatsApp Cloud API URL e.g. https://graph.facebook.com/v21.0/<PHONE_NUMBER_ID>/messages__>",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "whatsAppApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"messaging_product\": \"whatsapp\",\n  \"to\": \"{{ $('Lead Webhook').item.json.body.phone }}\",\n  \"type\": \"text\",\n  \"text\": { \"body\": {{ JSON.stringify($('AI Draft Response').item.json.output.whatsappMessage) }} }\n}",
+        "options": {}
+      },
+      "id": "b3db9185-087f-460b-8d2c-c1470ed132b4",
+      "name": "Send WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2496,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "opportunity",
+        "operation": "update",
+        "opportunityId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $('Lead Webhook').item.json.body.leadId }}"
+        },
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "description": "=AI Classification: {{ $('AI Classification').item.json.output.leadType }} / Priority {{ $('AI Classification').item.json.output.priority }} / Team {{ $('AI Classification').item.json.output.recommendedSalesTeam }}. Email sent: yes. WhatsApp sent: yes.",
+            "date_deadline": "={{ $now.plus(3, 'days').toFormat('yyyy-MM-dd') }}"
+          }
+        }
+      },
+      "id": "526238b9-1828-4e9b-9f74-2fb896c66443",
+      "name": "Update Odoo CRM",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        2720,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "<__PLACEHOLDER_VALUE__Power BI streaming dataset push URL__>",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "=[{\n  \"leadId\": \"{{ $('Lead Webhook').item.json.body.leadId }}\",\n  \"source\": \"{{ $('Lead Webhook').item.json.body.source }}\",\n  \"leadType\": \"{{ $('AI Classification').item.json.output.leadType }}\",\n  \"priority\": \"{{ $('AI Classification').item.json.output.priority }}\",\n  \"salesTeam\": \"{{ $('AI Classification').item.json.output.recommendedSalesTeam }}\",\n  \"budget\": \"{{ $('AI Classification').item.json.output.budget }}\",\n  \"status\": \"Contacted\",\n  \"timestamp\": \"{{ $now.toISO() }}\"\n}]",
+        "options": {}
+      },
+      "id": "4672c4b9-e2f3-4336-a4a6-8c3af7f8fac1",
+      "name": "Power BI Push",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [
+        2944,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "REPLACE_WITH_CHANNELID_3"
+        },
+        "text": "=Lead {{ $('Lead Webhook').item.json.body.name }} outreach was REJECTED by the sales manager. Please review and follow up manually.",
+        "otherOptions": {}
+      },
+      "id": "7599b3e2-9dc6-4251-a5dd-8757de95ac32",
+      "name": "Return to Sales Team",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        2272,
+        400
+      ]
+    },
+    {
+      "parameters": {},
+      "id": "0d16a7a2-0393-4958-a52b-9a84382fad35",
+      "name": "Invalid Lead - Missing Fields",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        448,
+        336
+      ]
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        928,
+        512
+      ],
+      "id": "8c8d8291-a52d-42a3-a631-61d72a2f78ae",
+      "name": "Simple Memory"
+    }
+  ],
+  "connections": {
+    "Lead Webhook": {
+      "main": [
+        [
+          {
+            "node": "Validate Required Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Required Fields": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Lead Check",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Invalid Lead - Missing Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Lead Check": {
+      "main": [
+        [
+          {
+            "node": "Duplicate Found?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Duplicate Found?": {
+      "main": [
+        [
+          {
+            "node": "Update Existing Lead",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "AI Classification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Classification": {
+      "main": [
+        [
+          {
+            "node": "AI Draft Response",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classification Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Classification",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Classification Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Classification",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Draft Response": {
+      "main": [
+        [
+          {
+            "node": "Slack Lead Summary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Draft Response",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Draft Schema": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "AI Draft Response",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack Lead Summary": {
+      "main": [
+        [
+          {
+            "node": "Human Approval",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Human Approval": {
+      "main": [
+        [
+          {
+            "node": "Approved?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Approved?": {
+      "main": [
+        [
+          {
+            "node": "Send Brevo Email",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Return to Sales Team",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Brevo Email": {
+      "main": [
+        [
+          {
+            "node": "Send WhatsApp",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send WhatsApp": {
+      "main": [
+        [
+          {
+            "node": "Update Odoo CRM",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Odoo CRM": {
+      "main": [
+        [
+          {
+            "node": "Power BI Push",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Classification",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
