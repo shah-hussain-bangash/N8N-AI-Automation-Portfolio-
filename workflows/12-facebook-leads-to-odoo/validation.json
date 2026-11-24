@@ -1,0 +1,11 @@
+{
+  "workflow": "Facebook Leads to Odoo CRM",
+  "nodes": 11,
+  "connections": 8,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [],
+  "sanitization_changes": 17,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

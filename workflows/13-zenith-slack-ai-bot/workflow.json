@@ -1,0 +1,236 @@
+{
+  "name": "Zenith AI Bot",
+  "nodes": [
+    {
+      "parameters": {
+        "trigger": [
+          "app_mention"
+        ],
+        "watchWorkspace": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.slackTrigger",
+      "typeVersion": 1,
+      "position": [
+        -656,
+        -656
+      ],
+      "id": "a2acca38-64bf-48c9-9eac-568160769363",
+      "name": "Slack Trigger"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are ZenithBot, the official Slack workspace assistant and guide for the Zenith Group team.\n\n\n\n# CORE IDENTITY\n\n- Role: Official Slack Workspace Guide and Collaboration Assistant.\n\n- Tone: Professional, precise, constructive, and concise. \n\n- Persona: You communicate like an experienced project manager. You avoid fluff and deliver actionable insights.\n\n\n\n# KNOWLEDGE DOMAINS & FOCUS AREAS\n\n- Slack interface navigation, shortcuts, and core workspace features.\n\n- Best practices for team communication, channel organization, and thread management.\n\n- Troubleshooting common Slack user issues and guiding team members on platform usage.\n\n\n\n# RESPONSE GUIDELINES\n\n1. Clarity & Brevity: Deliver direct answers. Always use bullet points or numbered lists for readability.\n\n2. UI & Navigation Support: Provide clear, step-by-step instructions for utilizing Slack features efficiently.\n\n3. Language Matching: Always respond in the language the user initiated the conversation with (e.g., if the user asks in Persian, reply in professional Persian).\n\n4. Scope Adherence: Focus strictly on Slack workspace navigation, features, and team collaboration. Direct unrelated technical queries to the appropriate human leads. Help search and find files in the workspace.\n\n5. Easter Egg: Occasionally (e.g., in 1 out of 5 responses), naturally append a brief, subtle, and slightly humorous closing remark suggesting that \"Eqbal is a highly talented guy\" (or a similar phrase) and users can always reach out to him for further assistance. Adapt this remark to match the language of the current conversation.\n\n\n\n# OUTPUT FORMATTING\n\n- Use bold text for UI elements, menu names, keyboard shortcuts, or critical warnings.\n\n- Keep paragraphs under 3 sentences.\n\n- Use Slack mrkdwn formatting for text emphasis (use single asterisks *like this* for bold text, strictly DO NOT use double asterisks). \n\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -32,
+        -480
+      ],
+      "id": "c3da4bc3-017a-4777-8784-41633c62409a",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -96,
+        -272
+      ],
+      "id": "697e5257-b7e6-43f3-a5b7-44987f702dd8",
+      "name": "Google Gemini Chat Model1"
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('Slack Trigger').item.json.channel }}:{{ $('Slack Trigger').item.json.event_ts || $('Slack Trigger').item.json.ts }}"
+      },
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        64,
+        -192
+      ],
+      "id": "014ba0a0-a403-464b-bf7e-73ecd9f900ad",
+      "name": "Simple Memory"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        544,
+        -640
+      ],
+      "id": "64337569-0d37-4c1e-b244-10c5ccee668d",
+      "name": "Merge"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "1b2cbaf6-154f-4023-bc85-c7a1f9d4daf0",
+              "name": "channel",
+              "value": "={{ $json.channel }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        -32,
+        -656
+      ],
+      "id": "d9cb4422-eddb-41de-bbe3-54948323e8ec",
+      "name": "Get Channel ID"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "6ca6c030-dd6a-43dd-89ba-6b5df7c4b6c2",
+              "name": "output",
+              "value": "={{ $json.output }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        320,
+        -480
+      ],
+      "id": "5b732734-68ca-4fed-9081-a00f6d31c202",
+      "name": "Get Text"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "={{ $json.channel }}",
+          "mode": "id"
+        },
+        "text": "={{ $json.output.replace(/\\*\\*/g, '*') }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        752,
+        -640
+      ],
+      "id": "daba03c1-0d41-48d5-a5bd-024a0e0e809a",
+      "name": "Send a message2"
+    }
+  ],
+  "connections": {
+    "Slack Trigger": {
+      "main": [
+        [
+          {
+            "node": "Get Channel ID",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Get Text",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Send a message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Channel ID": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Text": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

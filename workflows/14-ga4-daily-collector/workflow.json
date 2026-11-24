@@ -1,0 +1,390 @@
+{
+  "name": "WF-02 GA4 Daily Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Website_ID"
+            },
+            {
+              "name": "Domain"
+            },
+            {
+              "name": "GA4_Property_ID"
+            }
+          ]
+        }
+      },
+      "id": "460747e5-de0c-446c-8364-68749c8f40b7",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-prop",
+              "leftValue": "={{ $json.GA4_Property_ID }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "51d40734-8d14-46cf-8b65-2ca5a1abac89",
+      "name": "Has GA4 Property?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "propertyId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "={{ $json.GA4_Property_ID }}"
+        },
+        "dateRange": "custom",
+        "startDate": "={{ $today.minus({ days: 3 }).toISODate() }}",
+        "endDate": "={{ $today.minus({ days: 1 }).toISODate() }}",
+        "metricsGA4": {
+          "metricValues": [
+            {
+              "listName": "sessions"
+            },
+            {},
+            {
+              "listName": "screenPageViews"
+            },
+            {
+              "listName": "other",
+              "name": "engagedSessions"
+            },
+            {
+              "listName": "other",
+              "name": "keyEvents"
+            }
+          ]
+        },
+        "dimensionsGA4": {
+          "dimensionValues": [
+            {}
+          ]
+        },
+        "returnAll": true,
+        "additionalFields": {}
+      },
+      "id": "5e69eaa4-88aa-4946-acc5-cbc7671c4f22",
+      "name": "GA4 Report (Last 3 Days)",
+      "type": "n8n-nodes-base.googleAnalytics",
+      "typeVersion": 2,
+      "position": [
+        448,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const websiteId = $('Execute Workflow Trigger').first().json.Website_ID || '';\nconst domain = $('Execute Workflow Trigger').first().json.Domain || '';\n\nfunction fmtDate(d) {\n  if (!d) return '';\n  const s = String(d);\n  // GA4 date dimension is YYYYMMDD -> YYYY-MM-DD\n  if (/^\\d{8}$/.test(s)) {\n    return s.slice(0, 4) + '-' + s.slice(4, 6) + '-' + s.slice(6, 8);\n  }\n  return s;\n}\n\nconst rows = $input.all().map((item) => {\n  const j = item.json || {};\n  return {\n    json: {\n      Website_ID: websiteId,\n      Domain: domain,\n      Date: fmtDate(j.date),\n      Sessions: Number(j.sessions || 0),\n      Users: Number(j.totalUsers || 0),\n      Views: Number(j.screenPageViews || 0),\n      Engaged_Sessions: Number(j.engagedSessions || 0),\n      Key_Events: Number(j.keyEvents || 0),\n    },\n  };\n});\n\nreturn rows;"
+      },
+      "id": "6cc82beb-4bf7-4f99-9bbb-fd660256d34b",
+      "name": "Build GA4 Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "GA4_Daily"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Website_ID",
+            "Date"
+          ],
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Date": "={{ $json.Date }}",
+            "Sessions": "={{ $json.Sessions }}",
+            "Users": "={{ $json.Users }}",
+            "Views": "={{ $json.Views }}",
+            "Engaged_Sessions": "={{ $json.Engaged_Sessions }}",
+            "Key_Events": "={{ $json.Key_Events }}"
+          },
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Sessions",
+              "displayName": "Sessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Users",
+              "displayName": "Users",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Views",
+              "displayName": "Views",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Engaged_Sessions",
+              "displayName": "Engaged_Sessions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Key_Events",
+              "displayName": "Key_Events",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "eb1bd9d1-0f22-4a29-8f25-93400764df2c",
+      "name": "Upsert GA4_Daily",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "Website_ID",
+              "value": "={{ $('Execute Workflow Trigger').first().json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "collector",
+              "value": "GA4_Daily",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "s4",
+              "name": "rows_written",
+              "value": "={{ $('Build GA4 Rows').all().length }}",
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "message",
+              "value": "GA4 daily metrics upserted",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "359cc64c-4528-4a83-b530-6a3fb66a3521",
+      "name": "Status OK",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "Website_ID",
+              "value": "={{ $json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "collector",
+              "value": "GA4_Daily",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e4",
+              "name": "rows_written",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "e5",
+              "name": "message",
+              "value": "Skipped: missing GA4_Property_ID",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "7e3a2651-5680-4c2d-9b75-91e19f36e1ce",
+      "name": "Status Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has GA4 Property?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has GA4 Property?": {
+      "main": [
+        [
+          {
+            "node": "GA4 Report (Last 3 Days)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GA4 Report (Last 3 Days)": {
+      "main": [
+        [
+          {
+            "node": "Build GA4 Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build GA4 Rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert GA4_Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert GA4_Daily": {
+      "main": [
+        [
+          {
+            "node": "Status OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

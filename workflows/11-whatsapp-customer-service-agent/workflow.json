@@ -1,0 +1,237 @@
+{
+  "name": "Whatsapp API Integration",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "messages"
+        ],
+        "options": {
+          "messageStatusUpdates": [
+            "all"
+          ]
+        }
+      },
+      "id": "9d3df565-6c8e-449b-86ba-a927322f7df0",
+      "name": "WhatsApp Trigger",
+      "type": "n8n-nodes-base.whatsAppTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.messages[0].text.body }}",
+        "options": {
+          "systemMessage": "You are a helpful WhatsApp customer service assistant. Use the \"Get Inventory\" tool to check product availability and stock, the \"Get FAQ\" tool to answer common customer questions, and the \"Post Orders\" tool to record new customer orders. Always reply concisely and in a friendly tone suitable for WhatsApp."
+        }
+      },
+      "id": "9a228f1c-f7ab-4b95-a90d-4d5e2f16c7fe",
+      "name": "AI Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        416,
+        112
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.5-flash",
+        "options": {}
+      },
+      "id": "0fb39f66-833e-4907-805c-20db85b66dc8",
+      "name": "Google Gemini Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        224,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "={{ $('WhatsApp Trigger').item.json[\"messages[0]\"].from }}",
+        "contextWindowLength": 10
+      },
+      "id": "2674feed-badf-4da1-bfad-bf42308743f6",
+      "name": "Simple Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        352,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "Dubai Property Developers",
+        "sheetsUi": {
+          "sheetValues": [
+            {
+              "title": "Dubai Property Developers"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd9466f7-58dd-4c16-9d40-64736144862b",
+      "name": "Get Inventory",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        480,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "Post Order Sheets",
+        "sheetsUi": {
+          "sheetValues": [
+            {
+              "title": "Post Order Sheets"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4767ba03-cadf-4953-a6c9-524024e58ced",
+      "name": "Get FAQ",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        608,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "spreadsheet",
+        "title": "Post Order Sheets",
+        "sheetsUi": {
+          "sheetValues": [
+            {
+              "title": "Post Order Sheets"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0cce5cb-01ed-40e2-b242-4d26c8b447b5",
+      "name": "Post Orders",
+      "type": "n8n-nodes-base.googleSheetsTool",
+      "typeVersion": 4.7,
+      "position": [
+        736,
+        336
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $(\"WhatsApp Trigger\").item.json.messages[0].from }}",
+        "textBody": "={{ $json.output }}",
+        "additionalFields": {}
+      },
+      "id": "f8ce29c9-2fcc-47f7-8abf-a6f80af63a0b",
+      "name": "Send message",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        944,
+        112
+      ]
+    }
+  ],
+  "connections": {
+    "WhatsApp Trigger": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Send message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Simple Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Inventory": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get FAQ": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Post Orders": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

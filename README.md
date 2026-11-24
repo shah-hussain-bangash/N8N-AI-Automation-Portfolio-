@@ -1,6 +1,6 @@
 # n8n AI Automation
 
-A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns, video generation, WordPress/Elementor building and social publishing. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
+A sequenced collection of AI-assisted lead operations, customer response workflows, WhatsApp campaigns, video generation, WordPress/Elementor building and social publishing, conversational agents and analytics collection. Each project includes a public workflow export, integration inventory, configuration guide and static validation report.
 
 ## Projects
 
@@ -16,8 +16,13 @@ A sequenced collection of AI-assisted lead operations, customer response workflo
 | 08 | [WordPress Elementor Subworkflow](workflows/08-wordpress-elementor-subworkflow/README.md) | [JSON](workflows/08-wordpress-elementor-subworkflow/workflow.json) | 5 |
 | 09 | [Elementor Chat Agent](workflows/09-elementor-chat-agent/README.md) | [JSON](workflows/09-elementor-chat-agent/workflow.json) | 6 |
 | 10 | [AI Post Generator and Publisher](workflows/10-ai-post-generator-publisher/README.md) | [JSON](workflows/10-ai-post-generator-publisher/workflow.json) | 19 |
+| 11 | [WhatsApp Customer Service Agent](workflows/11-whatsapp-customer-service-agent/README.md) | [JSON](workflows/11-whatsapp-customer-service-agent/workflow.json) | 8 |
+| 12 | [Facebook Leads to Odoo CRM](workflows/12-facebook-leads-to-odoo/README.md) | [JSON](workflows/12-facebook-leads-to-odoo/workflow.json) | 11 |
+| 13 | [Zenith Slack AI Bot](workflows/13-zenith-slack-ai-bot/README.md) | [JSON](workflows/13-zenith-slack-ai-bot/workflow.json) | 8 |
+| 14 | [GA4 Daily Collector](workflows/14-ga4-daily-collector/README.md) | [JSON](workflows/14-ga4-daily-collector/workflow.json) | 7 |
+| 15 | [GSC Daily Collector](workflows/15-gsc-daily-collector/README.md) | [JSON](workflows/15-gsc-daily-collector/workflow.json) | 7 |
 
-The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These ten workflows are independent exports; numbering does not imply automatic cross-workflow execution.
+The sequence moves from lead intake and orchestration to reply handling, campaign delivery and media generation. These fifteen workflows are independent exports; numbering does not imply automatic cross-workflow execution.
 
 ## Getting started
 
@@ -25,9 +30,9 @@ Open a project README, import its workflow JSON into n8n, configure the listed c
 
 ## Publication status
 
-All ten exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
+All fifteen exports were checked for valid JSON, unique node names/IDs and valid connection targets. Account references and hardcoded contact values were removed from public copies; originals were not modified. These checks do not replace an n8n import or live integration test. Known incomplete mappings and logic assumptions are documented per project.
 
-No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the ten supplied exports; it does not claim the earlier archive collections have been uploaded.
+No live workflow was run, and no email, WhatsApp message or call was sent during publication. This catalog covers the fifteen supplied exports; it does not claim the earlier archive collections have been uploaded.
 
 ## Repository layout
 
@@ -43,6 +48,11 @@ workflows/
   08-wordpress-elementor-subworkflow/
   09-elementor-chat-agent/
   10-ai-post-generator-publisher/
+  11-whatsapp-customer-service-agent/
+  12-facebook-leads-to-odoo/
+  13-zenith-slack-ai-bot/
+  14-ga4-daily-collector/
+  15-gsc-daily-collector/
     README.md
     CONFIGURATION.md
     workflow.json

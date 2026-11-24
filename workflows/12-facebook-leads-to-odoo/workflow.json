@@ -1,0 +1,306 @@
+{
+  "name": "Real Estate Lead Pipeline → Odoo CRM",
+  "nodes": [
+    {
+      "parameters": {
+        "content": "## Real-Estate Lead Pipeline → Odoo CRM\\n\\nFacebook Lead Ads → Normalize + Qualify + Segment (auto tag) + Auto assign → Duplicate check in Odoo → Create opportunity → Welcome automation (WhatsApp + Email + Slack to assigned desk).\\n\\n**Segments:** Pool Investment, Joint Venture, Off Plan, Plot Owner, Real Estate Agent (keyword-matched in the Code node)."
+      },
+      "id": "a1fc9017-27b7-4dfc-88dc-b8c9b27dd597",
+      "name": "Sticky Note a1fc9017",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "content": "### Setup needed\\n- Connect Facebook Lead Ads, Odoo, WhatsApp, Gmail, Slack credentials\\n- Pick the Facebook Page + Lead Form on the trigger\\n- Set WhatsApp phone number ID and the Slack notifications channel\\n- (Optional) map each segment desk to a real Odoo user ID in the Code node to auto-assign a salesperson"
+      },
+      "id": "216109f3-5aa8-4775-9121-fe709a545e77",
+      "name": "Sticky Note 216109f3",
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        560,
+        448
+      ]
+    },
+    {
+      "parameters": {
+        "page": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "form": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "options": {
+          "simplifyOutput": true
+        }
+      },
+      "id": "c05b7002-96cf-4097-a123-2e5ef1d3ec4e",
+      "name": "New Facebook Lead",
+      "type": "n8n-nodes-base.facebookLeadAdsTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const raw = $input.first().json;\n\n// Facebook Lead Ads (simplified output) flattens field_data into top-level keys.\n// Field keys vary per form, so probe common variants defensively.\nfunction pick(obj, keys) {\n  for (const k of keys) {\n    const v = obj[k];\n    if (v !== undefined && v !== null && String(v).trim() !== '') return String(v).trim();\n  }\n  return '';\n}\n\nconst fullName = pick(raw, ['full_name', 'name', 'your_name']);\nconst firstName = pick(raw, ['first_name']);\nconst lastName = pick(raw, ['last_name']);\nconst name = fullName || [firstName, lastName].filter(Boolean).join(' ') || 'Unknown Lead';\n\nconst email = pick(raw, ['email', 'email_address', 'work_email']).toLowerCase();\nlet phone = pick(raw, ['phone_number', 'phone', 'mobile', 'whatsapp_number']);\nphone = phone.replace(/[^\\d+]/g, '');\n\nconst interestRaw = pick(raw, ['interest', 'i_am_interested_in', 'investment_type', 'what_are_you_looking_for', 'service', 'segment']).toLowerCase();\nconst budgetRaw = pick(raw, ['budget', 'investment_budget', 'budget_range']);\nconst cityRaw = pick(raw, ['city', 'location', 'preferred_location']);\n\n// ---- LEAD SEGMENTATION (AUTO TAGGING) ----\nconst SEGMENTS = [\n  { tag: 'Pool Investment',   keywords: ['pool', 'pooled', 'fund'] },\n  { tag: 'Joint Venture',     keywords: ['joint', 'jv', 'partner'] },\n  { tag: 'Off Plan',          keywords: ['off plan', 'offplan', 'off-plan', 'under construction'] },\n  { tag: 'Plot Owner',        keywords: ['plot', 'land'] },\n  { tag: 'Real Estate Agent', keywords: ['agent', 'broker', 'realtor'] },\n];\nlet segment = 'Off Plan'; // fallback bucket\nfor (const s of SEGMENTS) {\n  if (s.keywords.some(k => interestRaw.includes(k))) { segment = s.tag; break; }\n}\n\n// ---- AUTO ASSIGNMENT (per-segment owner desk) ----\n// odooUserId 0 = not mapped yet; set real Odoo res.users IDs during setup to auto-assign salesperson.\nconst AGENT_BY_SEGMENT = {\n  'Pool Investment':   { name: 'Pool Investment Desk', odooUserId: 0 },\n  'Joint Venture':     { name: 'Joint Venture Desk',   odooUserId: 0 },\n  'Off Plan':          { name: 'Off Plan Desk',        odooUserId: 0 },\n  'Plot Owner':        { name: 'Plot Owner Desk',      odooUserId: 0 },\n  'Real Estate Agent': { name: 'Partnerships Desk',    odooUserId: 0 },\n};\nconst agent = AGENT_BY_SEGMENT[segment];\n\n// ---- LEAD QUALIFICATION (scoring) ----\nlet score = 0;\nif (email) score += 30;\nif (phone) score += 30;\nconst budgetNum = parseFloat(budgetRaw.replace(/[^\\d.]/g, '')) || 0;\nif (budgetNum >= 100000) score += 25; else if (budgetNum > 0) score += 10;\nif (cityRaw) score += 15;\nlet quality = 'cold';\nif (score >= 70) quality = 'hot'; else if (score >= 45) quality = 'warm';\n\nconst firstNameOnly = name.split(' ')[0];\n\nreturn [{ json: {\n  name,\n  firstName: firstNameOnly,\n  email,\n  phone,\n  interest: interestRaw,\n  budget: budgetRaw,\n  city: cityRaw,\n  segment,\n  quality,\n  score,\n  assignedAgent: agent.name,\n  assignedUserId: agent.odooUserId,\n  leadId: raw.id || '',\n  createdTime: raw.created_time || $now.toISO(),\n  whatsappBody: 'Hi ' + firstNameOnly + '! Thanks for your interest in ' + segment + ' with Zenith Smart Group. Your specialist (' + agent.name + ') will reach out shortly. Reply here anytime with questions.',\n  emailSubject: 'Welcome to Zenith Smart Group — ' + segment,\n  emailBody: '<p>Hi ' + firstNameOnly + ',</p><p>Thank you for your interest in <b>' + segment + '</b>. Your dedicated specialist <b>' + agent.name + '</b> will contact you shortly.</p><p>Warm regards,<br/>Zenith Smart Group</p>',\n}}];"
+      },
+      "id": "13e242a2-0775-429d-a3c4-df64a09c6d42",
+      "name": "Normalize & Qualify",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "odooApi",
+        "resource": "opportunity",
+        "limit": 1,
+        "filters": {
+          "filter": [
+            {
+              "fieldName": "email_from",
+              "value": "={{ $('Normalize & Qualify').item.json.email }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "2e10698e-7a5a-4874-a2ae-ffe9952d2a3b",
+      "name": "Find Existing Lead",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        448,
+        96
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "dup",
+              "leftValue": "={{ $json.id }}",
+              "rightValue": "",
+              "operator": {
+                "type": "number",
+                "operation": "exists",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2baa2dc0-926a-4ba9-a662-117463028b6c",
+      "name": "Is Duplicate?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:warning: *Duplicate lead skipped* — {{ $('Normalize & Qualify').item.json.name }} ({{ $('Normalize & Qualify').item.json.email }}) already exists in Odoo (ID {{ $json.id }}). Segment: {{ $('Normalize & Qualify').item.json.segment }}.",
+        "otherOptions": {}
+      },
+      "id": "0a71d225-033c-4340-9944-28fa9a103f17",
+      "name": "Notify Duplicate",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "odooApi",
+        "resource": "opportunity",
+        "operation": "create",
+        "fieldsToSend": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "name": "={{ $('Normalize & Qualify').item.json.name }} — {{ $('Normalize & Qualify').item.json.segment }}",
+            "contact_name": "={{ $('Normalize & Qualify').item.json.name }}",
+            "email_from": "={{ $('Normalize & Qualify').item.json.email }}",
+            "phone": "={{ $('Normalize & Qualify').item.json.phone }}",
+            "description": "=Segment: {{ $('Normalize & Qualify').item.json.segment }} | Quality: {{ $('Normalize & Qualify').item.json.quality }} | Score: {{ $('Normalize & Qualify').item.json.score }} | Budget: {{ $('Normalize & Qualify').item.json.budget }} | City: {{ $('Normalize & Qualify').item.json.city }} | Assigned: {{ $('Normalize & Qualify').item.json.assignedAgent }} | Source: Facebook Lead Ads"
+          }
+        }
+      },
+      "id": "3849797a-89d6-4269-af60-f6eb61268b97",
+      "name": "Create Odoo Opportunity",
+      "type": "n8n-nodes-base.odoo",
+      "typeVersion": 2,
+      "position": [
+        896,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "send",
+        "phoneNumberId": "REPLACE_WITH_PHONENUMBERID_1",
+        "recipientPhoneNumber": "={{ $('Normalize & Qualify').item.json.phone }}",
+        "textBody": "={{ $('Normalize & Qualify').item.json.whatsappBody }}",
+        "additionalFields": {}
+      },
+      "id": "339b7c1b-506b-4694-abf8-1bedfd542134",
+      "name": "Welcome WhatsApp",
+      "type": "n8n-nodes-base.whatsApp",
+      "typeVersion": 1.1,
+      "position": [
+        1120,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Normalize & Qualify').item.json.email }}",
+        "subject": "={{ $('Normalize & Qualify').item.json.emailSubject }}",
+        "message": "={{ $('Normalize & Qualify').item.json.emailBody }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "id": "108f0972-a03e-425a-acd8-ec60a87c5b42",
+      "name": "Welcome Email",
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1120,
+        192
+      ]
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "text": "=:tada: *New {{ $('Normalize & Qualify').item.json.quality }} lead — {{ $('Normalize & Qualify').item.json.segment }}*\n*Name:* {{ $('Normalize & Qualify').item.json.name }}\n*Email:* {{ $('Normalize & Qualify').item.json.email }}\n*Phone:* {{ $('Normalize & Qualify').item.json.phone }}\n*Score:* {{ $('Normalize & Qualify').item.json.score }} ({{ $('Normalize & Qualify').item.json.quality }})\n*Assigned to:* {{ $('Normalize & Qualify').item.json.assignedAgent }}\n*Odoo Opportunity ID:* {{ $json.id }}",
+        "otherOptions": {}
+      },
+      "id": "c61b7a09-03db-4b0f-abd0-e2a958051814",
+      "name": "Notify Assigned Agent",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.5,
+      "position": [
+        1120,
+        384
+      ]
+    }
+  ],
+  "connections": {
+    "New Facebook Lead": {
+      "main": [
+        [
+          {
+            "node": "Normalize & Qualify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Normalize & Qualify": {
+      "main": [
+        [
+          {
+            "node": "Find Existing Lead",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Existing Lead": {
+      "main": [
+        [
+          {
+            "node": "Is Duplicate?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Duplicate?": {
+      "main": [
+        [
+          {
+            "node": "Notify Duplicate",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Odoo Opportunity",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Odoo Opportunity": {
+      "main": [
+        [
+          {
+            "node": "Welcome WhatsApp",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Welcome Email",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Notify Assigned Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "workflow": "Zenith Slack AI Bot",
+  "nodes": 8,
+  "connections": 8,
+  "active": false,
+  "graph_errors": [],
+  "missing_named_expression_references": [],
+  "source_configuration_placeholder_nodes": [],
+  "sanitization_changes": 11,
+  "validation": "Static JSON and graph inspection only; no n8n import or provider execution performed."
+}

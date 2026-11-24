@@ -1,0 +1,371 @@
+{
+  "name": "WF-04 GSC Daily Collector",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "Website_ID"
+            },
+            {
+              "name": "Domain"
+            },
+            {
+              "name": "GSC_Property"
+            }
+          ]
+        }
+      },
+      "id": "a465fc3e-6e1d-4051-858b-7d59d210fc94",
+      "name": "Execute Workflow Trigger",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "has-prop",
+              "leftValue": "={{ $json.GSC_Property }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "d047a892-9765-4d0f-81b8-1a1c52e9818e",
+      "name": "Has GSC Property?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        224,
+        96
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://searchconsole.googleapis.com/webmasters/v3/sites/{{ encodeURIComponent($json.GSC_Property) }}/searchAnalytics/query",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleApi",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ startDate: $today.minus({ days: 3 }).toISODate(), endDate: $today.minus({ days: 1 }).toISODate(), dimensions: [\"date\"], rowLimit: 100 }) }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "70a7b182-4775-40fb-869a-8e11d5f0bdd3",
+      "name": "GSC Search Analytics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        448,
+        0
+      ],
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "jsCode": "const websiteId = $('Execute Workflow Trigger').first().json.Website_ID || '';\nconst domain = $('Execute Workflow Trigger').first().json.Domain || '';\n\nconst out = [];\nfor (const item of $input.all()) {\n  const resp = item.json || {};\n  const rows = Array.isArray(resp.rows) ? resp.rows : [];\n  for (const r of rows) {\n    const date = Array.isArray(r.keys) && r.keys.length ? r.keys[0] : '';\n    out.push({\n      json: {\n        Website_ID: websiteId,\n        Domain: domain,\n        Date: date,\n        Clicks: Number(r.clicks || 0),\n        Impressions: Number(r.impressions || 0),\n        CTR: Number(r.ctr || 0),\n        Position: Number(r.position || 0),\n      },\n    });\n  }\n}\n\nreturn out;"
+      },
+      "id": "d2770af8-a7ce-4a8a-b771-6b9366361010",
+      "name": "Build GSC Rows",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        672,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "mode": "list",
+          "value": ""
+        },
+        "sheetName": {
+          "__rl": true,
+          "mode": "name",
+          "value": "GSC_Daily"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "matchingColumns": [
+            "Website_ID",
+            "Date"
+          ],
+          "value": {
+            "Website_ID": "={{ $json.Website_ID }}",
+            "Domain": "={{ $json.Domain }}",
+            "Date": "={{ $json.Date }}",
+            "Clicks": "={{ $json.Clicks }}",
+            "Impressions": "={{ $json.Impressions }}",
+            "CTR": "={{ $json.CTR }}",
+            "Position": "={{ $json.Position }}"
+          },
+          "schema": [
+            {
+              "id": "Website_ID",
+              "displayName": "Website_ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Domain",
+              "displayName": "Domain",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Date",
+              "displayName": "Date",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Clicks",
+              "displayName": "Clicks",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Impressions",
+              "displayName": "Impressions",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "CTR",
+              "displayName": "CTR",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "Position",
+              "displayName": "Position",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": false
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "15760968-005a-4eb7-abec-3b08867846b0",
+      "name": "Upsert GSC_Daily",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        896,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "s1",
+              "name": "Website_ID",
+              "value": "={{ $('Execute Workflow Trigger').first().json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "s2",
+              "name": "collector",
+              "value": "GSC_Daily",
+              "type": "string"
+            },
+            {
+              "id": "s3",
+              "name": "ok",
+              "value": true,
+              "type": "boolean"
+            },
+            {
+              "id": "s4",
+              "name": "rows_written",
+              "value": "={{ $('Build GSC Rows').all().length }}",
+              "type": "number"
+            },
+            {
+              "id": "s5",
+              "name": "message",
+              "value": "GSC daily metrics upserted",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "013572ea-e4f0-4eb5-a9fa-abffe479eff0",
+      "name": "Status OK",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1120,
+        0
+      ],
+      "executeOnce": true
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e1",
+              "name": "Website_ID",
+              "value": "={{ $json.Website_ID }}",
+              "type": "string"
+            },
+            {
+              "id": "e2",
+              "name": "collector",
+              "value": "GSC_Daily",
+              "type": "string"
+            },
+            {
+              "id": "e3",
+              "name": "ok",
+              "value": false,
+              "type": "boolean"
+            },
+            {
+              "id": "e4",
+              "name": "rows_written",
+              "value": 0,
+              "type": "number"
+            },
+            {
+              "id": "e5",
+              "name": "message",
+              "value": "Skipped: missing GSC_Property",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "21a7633d-e09d-4857-9c1a-d1e0addae141",
+      "name": "Status Skipped",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        448,
+        192
+      ]
+    }
+  ],
+  "connections": {
+    "Execute Workflow Trigger": {
+      "main": [
+        [
+          {
+            "node": "Has GSC Property?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has GSC Property?": {
+      "main": [
+        [
+          {
+            "node": "GSC Search Analytics",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Status Skipped",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GSC Search Analytics": {
+      "main": [
+        [
+          {
+            "node": "Build GSC Rows",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Build GSC Rows": {
+      "main": [
+        [
+          {
+            "node": "Upsert GSC_Daily",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Upsert GSC_Daily": {
+      "main": [
+        [
+          {
+            "node": "Status OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  }
+}
